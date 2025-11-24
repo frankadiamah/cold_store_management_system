@@ -14,8 +14,8 @@ from .forms import ProductForm, StockEntryForm, StockOutForm
 
 
 # 🧊 Dashboard (View-only for Admin, Staff, Accountant)
-@login_required
-@has_any_group("Admin", "Staff", "Accountant")
+# @login_required
+# @has_any_group("Admin", "Staff", "Accountant")
 def dashboard(request):
     products = Product.objects.all().order_by("category", "-quantity")
     low_stock = products.filter(quantity__lte=F('min_quantity_alert'))

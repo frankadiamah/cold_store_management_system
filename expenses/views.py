@@ -22,8 +22,8 @@ from datetime import datetime
 #     messages.error(request, "Failed to add expense. Please check your inputs.")
 
 
-@login_required
-@has_any_group("Admin","Staff")
+# @login_required
+# @has_any_group("Admin","Staff")
 def add_expense(request):
     if request.method == "POST":
         form = ExpenseForm(request.POST)
@@ -38,20 +38,20 @@ def add_expense(request):
 
 
 # listing of expenses for current user
-@login_required
+# @login_required
 def expense_list(request):
     expenses = Expense.objects.filter(created_by=request.user).order_by("-timestamp")
     return render(request, "expenses/expense_list.html", {"expenses": expenses})
 
 
 # categories
-@login_required
+# @login_required
 def expense_category_list(request):
     categories = ExpenseCategory.objects.all().order_by("name")
     return render(request, "expenses/expense_category_list.html", {"categories": categories})
 
 
-@login_required
+# @login_required
 def add_expense_category(request):
     if request.method == "POST":
         form = ExpenseCategoryForm(request.POST)

@@ -6,7 +6,7 @@ from inventory.models import Product
 from django.db.models import Sum
 from datetime import datetime, timedelta
 
-@login_required
+# @login_required
 def analytics_dashboard(request):
     # Sales & Expenses - last 7 days
     today = datetime.today()
