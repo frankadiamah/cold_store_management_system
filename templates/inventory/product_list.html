@@ -136,7 +136,7 @@
     </div>
   </div> {% endcomment %}
 
-  <div class="bg-slate-900 dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-800 overflow-x-auto">
+  {% comment %} <div class="bg-slate-900 dark:bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-800 overflow-x-auto">
     <div class="flex items-center justify-between mb-4">
       <div></div>
       <a href="{% url 'product_add' %}" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">+ Add Product</a>
@@ -220,6 +220,149 @@
     </div>
 </div>
   
+</div> {% endcomment %}
+<!-- RESPONSIVE PRODUCTS SECTION -->
+<div class="bg-slate-900 p-6 rounded-2xl shadow-lg border border-slate-800">
+
+  <div class="flex items-center justify-between mb-4">
+    <div></div>
+    <a href="{% url 'product_add' %}" 
+       class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg shadow">
+      + Add Product
+    </a>
+  </div>
+
+  <!-- DESKTOP TABLE (hidden on mobile) -->
+  <div class="hidden sm:block overflow-x-auto">
+    <table class="min-w-full text-sm">
+      <thead class="bg-slate-800 text-slate-300 text-xs uppercase">
+        <tr>
+          <th class="p-3 text-left">Product</th>
+          <th class="p-3 text-left">SKU</th>
+          <th class="p-3 text-right">Qty</th>
+          <th class="p-3 text-right">Price</th>
+          <th class="p-3 text-center">Actions</th>
+        </tr>
+      </thead>
+
+      <tbody class="divide-y divide-slate-800">
+        {% for p in products %}
+        <tr class="transition hover:bg-slate-800/40">
+          <td class="p-3 flex items-center gap-3">
+            {% if p.image %}
+              <img src="{{ p.image.url }}" class="w-12 h-12 object-cover rounded">
+            {% else %}
+              <div class="w-12 h-12 bg-slate-700 rounded flex items-center justify-center text-slate-400">📦</div>
+            {% endif %}
+
+            <div>
+              <div class="font-medium text-slate-100">{{ p.name }}</div>
+              <div class="text-xs text-slate-400">
+                {{ p.category.name|default:"—" }}
+              </div>
+
+              {% if p.quantity <= p.min_quantity_alert %}
+              <span class="inline-block mt-1 px-2 py-0.5 text-xs bg-amber-600 text-amber-100 rounded-full">
+                ⚠️ Low
+              </span>
+              {% endif %}
+            </div>
+          </td>
+
+          <td class="p-3 text-slate-300">{{ p.sku|default:"—" }}</td>
+          <td class="p-3 text-right text-slate-100">{{ p.quantity }}</td>
+          <td class="p-3 text-right text-slate-100">₵{{ p.unit_price|floatformat:2 }}</td>
+
+          <td class="p-3 text-center">
+            <div class="inline-flex gap-2">
+              <a href="{% url 'product_edit' p.pk %}" class="text-indigo-400 hover:underline">Edit</a>
+              <button data-product-id="{{ p.pk }}" data-product-name="{{ p.name }}"
+                      class="delete-btn px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs">
+                Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+        {% empty %}
+          <tr>
+            <td colspan="5" class="p-6 text-center text-slate-400">No products found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- MOBILE CARDS (show only on small screens) -->
+  <div class="grid sm:hidden gap-4">
+    {% for p in products %}
+    <div class="bg-slate-800 rounded-xl p-4 shadow flex gap-4">
+
+      <!-- Image -->
+      {% if p.image %}
+        <img src="{{ p.image.url }}" class="w-20 h-20 object-cover rounded-lg">
+      {% else %}
+        <div class="w-20 h-20 bg-slate-700 rounded-lg flex items-center justify-center text-slate-300">📦</div>
+      {% endif %}
+
+      <!-- Info -->
+      <div class="flex-1">
+        <div class="text-lg font-semibold text-white">{{ p.name }}</div>
+        <div class="text-xs text-slate-400">{{ p.category.name|default:"No Category" }}</div>
+
+        <div class="mt-2 text-sm text-slate-200">
+          Qty: <span class="font-medium">{{ p.quantity }}</span>
+        </div>
+
+        <div class="text-sm text-slate-200">
+          Price: <span class="font-semibold">₵{{ p.unit_price|floatformat:2 }}</span>
+        </div>
+
+        {% if p.quantity <= p.min_quantity_alert %}
+        <span class="inline-block mt-2 text-xs bg-amber-600 text-amber-100 px-2 py-0.5 rounded">
+          ⚠️ Low Stock
+        </span>
+        {% endif %}
+
+        <!-- ACTIONS -->
+        <div class="flex gap-3 mt-3">
+          <a href="{% url 'product_edit' p.pk %}" 
+             class="text-blue-400 font-medium text-sm">Edit</a>
+
+          <button data-product-id="{{ p.pk }}" data-product-name="{{ p.name }}"
+                  class="delete-btn px-3 py-1 text-xs bg-red-600 text-white rounded">
+            Delete
+          </button>
+        </div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+
+  <!-- PAGINATION -->
+  <div class="mt-4 flex items-center justify-between text-slate-400 text-sm">
+    <div>Showing {{ page_obj.start_index }} - {{ page_obj.end_index }} of {{ page_obj.paginator.count }}</div>
+    <nav class="flex items-center gap-1">
+      {% if page_obj.has_previous %}
+        <a href="?page=1{% if query_string %}&{{ query_string }}{% endif %}"
+           class="px-3 py-1 rounded border border-slate-700">« First</a>
+
+        <a href="?page={{ page_obj.previous_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+           class="px-3 py-1 rounded border border-slate-700">‹ Prev</a>
+      {% endif %}
+
+      <span class="px-3 py-1">
+        Page {{ page_obj.number }} / {{ page_obj.paginator.num_pages }}
+      </span>
+
+      {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if query_string %}&{{ query_string }}{% endif %}"
+           class="px-3 py-1 rounded border border-slate-700">Next ›</a>
+
+        <a href="?page={{ page_obj.paginator.num_pages }}{% if query_string %}&{{ query_string }}{% endif %}"
+           class="px-3 py-1 rounded border border-slate-700">Last »</a>
+      {% endif %}
+    </nav>
+  </div>
 </div>
 
 <!-- Delete confirmation modal (simple) -->
