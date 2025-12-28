@@ -20,3 +20,11 @@ env/
 # Environment variables
 .env
 db.sqlite3
+
+staticfiles_build/
+staticfiles/
+__pycache__/
+*.pyc
+.env
+db.sqlite3
+media/
