@@ -138,7 +138,7 @@ class ProductListView(ListView):
 
 # 🧾 Add new product
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def product_delete(request, pk):
     product = get_object_or_404(Product, pk=pk)
 
@@ -155,6 +155,9 @@ def product_delete(request, pk):
 
     return redirect('product_list')
 # replace previous ProductCreateView with this function-based view
+@login_required
+@has_any_group("Admin", "Accountant")
+
 def product_create(request):
     if request.method == "POST":
         form = ProductForm(request.POST)
@@ -184,7 +187,7 @@ def product_create(request):
 
 # 🧮 Stock In
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def stock_in(request):
     if request.method == "POST":
         form = StockEntryForm(request.POST)
@@ -203,7 +206,7 @@ def stock_in(request):
 
 # 📉 Stock Out
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def stock_out(request):
     if request.method == "POST":
         form = StockOutForm(request.POST)
@@ -221,8 +224,9 @@ def stock_out(request):
 
 
 # ✏️ Edit Product
+# @has_any_group("Admin", "Staff")
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def product_edit(request, pk):
     product = get_object_or_404(Product, pk=pk)
     if request.method == "POST":
@@ -251,8 +255,9 @@ def product_edit(request, pk):
 
 
 # 📝 Edit Stock Entry
+# @has_any_group("Admin", "Staff")
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def stock_entry_edit(request, pk):
     entry = get_object_or_404(StockEntry, pk=pk)
     if request.method == "POST":
@@ -272,7 +277,7 @@ def stock_entry_edit(request, pk):
 
 # 🧾 Edit Stock Out
 @login_required
-@has_any_group("Admin", "Staff")
+@has_any_group("Admin", "Accountant")
 def stock_out_edit(request, pk):
     out = get_object_or_404(StockOut, pk=pk)
     if request.method == "POST":
@@ -308,7 +313,7 @@ def retail_price_list(request):
 
 
 @login_required
-@has_any_group("Admin")
+@has_any_group("Admin", "Accountant")
 def wholesale_price_list(request):
     """
     Admin-only view:

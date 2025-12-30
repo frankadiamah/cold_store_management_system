@@ -6,6 +6,7 @@ from django.contrib.auth.decorators import login_required
 from django.forms import formset_factory
 from django.db import transaction
 from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+from decimal import Decimal, ROUND_HALF_UP
 
 from users.utils import has_any_group
 from .models import Sale, SaleItem, CreditPayment
@@ -85,15 +86,27 @@ def create_sale(request):
             if subtotal_after_discount < Decimal("0.00"):
                 subtotal_after_discount = Decimal("0.00")
 
-            vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"))
+            # vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"))
+            # grand = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
+            
+            apply_vat = sale_form.cleaned_data.get("apply_vat", True)
+            vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01")) if apply_vat else Decimal("0.00")
             grand = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
 
+            sale.apply_vat = apply_vat
             sale.subtotal_amount = subtotal_after_discount
             sale.vat_amount = vat
             sale.total_amount = grand
             sale.due_date = sale_form.cleaned_data.get("due_date")
+            sale.save(update_fields=["apply_vat", "subtotal_amount", "vat_amount", "total_amount", "due_date"])
+            
+            
+            # sale.subtotal_amount = subtotal_after_discount
+            # sale.vat_amount = vat
+            # sale.total_amount = grand
+            # sale.due_date = sale_form.cleaned_data.get("due_date")
 
-            sale.save(update_fields=["subtotal_amount", "vat_amount", "total_amount", "due_date"])
+            # sale.save(update_fields=["subtotal_amount", "vat_amount", "total_amount", "due_date"])
 
             # CREDIT handling
             if sale.is_credit:
@@ -606,9 +619,9 @@ def receipt_view(request, sale_id):
     response['Content-Disposition'] = f'inline; filename="receipt_{sale.id}.pdf"'
     return response
 
-from decimal import Decimal, ROUND_HALF_UP
 
 VAT_RATE = Decimal("0.15")
+
 
 def sale_receipt(request, sale_id):
     sale = get_object_or_404(Sale, id=sale_id)
@@ -618,23 +631,21 @@ def sale_receipt(request, sale_id):
     discount = sale.discount or Decimal("0.00")
     subtotal_after_discount = max(Decimal("0.00"), subtotal - discount)
 
-    vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
-    grand_total = (subtotal_after_discount + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+    vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01")) if sale.apply_vat else Decimal("0.00")
+    grand_total = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
 
-    # QR base64
+    # QR base64 (unchanged)
     qr_base64 = ""
     try:
-        qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand_total}|Date:{sale.timestamp:%Y-%m-%d %H:%M}"
+        qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand_total:.2f}|Date:{sale.timestamp.strftime('%Y-%m-%d %H:%M')}"
         qr_img = qrcode.make(qr_text)
         buf = BytesIO()
         qr_img.save(buf, format="PNG")
         buf.seek(0)
         qr_base64 = base64.b64encode(buf.read()).decode("ascii")
-    finally:
-        try:
-            buf.close()
-        except Exception:
-            pass
+        buf.close()
+    except Exception:
+        qr_base64 = ""
 
     return render(request, "sales/receipt.html", {
         "sale": sale,
@@ -646,6 +657,46 @@ def sale_receipt(request, sale_id):
         "grand_total": grand_total,
         "qr_base64": qr_base64,
     })
+
+# def sale_receipt(request, sale_id):
+#     sale = get_object_or_404(Sale, id=sale_id)
+#     items = sale.items.all()
+
+#     subtotal = sum((it.line_total() for it in items), Decimal("0.00"))
+#     discount = sale.discount or Decimal("0.00")
+#     subtotal_after_discount = max(Decimal("0.00"), subtotal - discount)
+    
+
+#     # vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+#     # grand_total = (subtotal_after_discount + vat).quantize(Decimal("0.01"), rounding=ROUND_HALF_UP)
+#     # updated on 30/12/2025 to include apply_vat field
+#      vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01")) if apply_vat else Decimal("0.00")
+#      grand = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
+#     # QR base64
+#     qr_base64 = ""
+#     try:
+#         qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand_total}|Date:{sale.timestamp:%Y-%m-%d %H:%M}"
+#         qr_img = qrcode.make(qr_text)
+#         buf = BytesIO()
+#         qr_img.save(buf, format="PNG")
+#         buf.seek(0)
+#         qr_base64 = base64.b64encode(buf.read()).decode("ascii")
+#     finally:
+#         try:
+#             buf.close()
+#         except Exception:
+#             pass
+
+#     return render(request, "sales/receipt.html", {
+#         "sale": sale,
+#         "items": items,
+#         "subtotal": subtotal,
+#         "discount": discount,
+#         "subtotal_after_discount": subtotal_after_discount,
+#         "vat": vat,
+#         "grand_total": grand_total,
+#         "qr_base64": qr_base64,
+#     })
 
 
 # # @login_required

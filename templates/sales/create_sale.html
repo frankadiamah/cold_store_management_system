@@ -141,11 +141,16 @@
         <div class="text-slate-700">Discount</div>
         <div class="font-medium">₵ <span id="discountDisplay">0.00</span></div>
       </div>
+      {% comment %} optiona for vat Calculate {% endcomment %}
+      <div class="flex items-center gap-2">
+      {{ sale_form.apply_vat }}
+      <label class="text-sm text-slate-700 dark:text-slate-300">Apply VAT (15%)</label>
+      </div>
 
       <div class="flex justify-between items-center mt-2">
         <div class="text-slate-700">VAT (15%)</div>
         <div class="font-medium">₵ <span id="vatAmount">0.00</span></div>
-      </div>
+      </div>  
 
       <div class="border-t mt-3 pt-3 text-right">
         <div class="text-lg text-slate-700">Grand Total</div>
@@ -197,29 +202,42 @@ function updateRow(row) {
     const itemTotal = qty * unitPrice;
     if (itemTotalInput) itemTotalInput.value = fmt(itemTotal);
 }
+document.addEventListener("change", (e) => {
+  if (e.target && e.target.name === "apply_vat") {
+    recalcTotals();
+  }
+});
 
 /* Recalculate totals for entire formset */
-function recalcTotals() {
-    let subtotal = 0;
-    document.querySelectorAll(".item-row").forEach(row => {
-        const raw = row.querySelector(".item-total").value || "0.00";
-        subtotal += cleanNumber(raw);
-    });
 
-    // discount input (float) - ensure exists
-    const discountInput = document.querySelector(".discount-input");
-    const discountVal = discountInput ? cleanNumber(discountInput.value) : 0;
-
-    const subtotalAfterDiscount = Math.max(0, subtotal - discountVal);
-    const vat = subtotalAfterDiscount * VAT_RATE;
-    const grand = subtotalAfterDiscount + vat;
-
-    // display
-    document.getElementById("subTotal").innerText = fmt(subtotal);
-    document.getElementById("discountDisplay").innerText = fmt(discountVal);
-    document.getElementById("vatAmount").innerText = fmt(vat);
-    document.getElementById("grandTotal").innerText = fmt(grand);
+// Check if VAT checkbox is checked
+function isVatEnabled() {
+  const cb = document.querySelector("input[name='apply_vat']");
+  return cb ? cb.checked : true;
 }
+
+function recalcTotals() {
+  let subtotal = 0;
+  document.querySelectorAll(".item-row").forEach(row => {
+    const raw = row.querySelector(".item-total").value || "0.00";
+    subtotal += cleanNumber(raw);
+  });
+
+  const discountInput = document.querySelector(".discount-input");
+  const discountVal = discountInput ? cleanNumber(discountInput.value) : 0;
+
+  const subtotalAfterDiscount = Math.max(0, subtotal - discountVal);
+
+  const vat = isVatEnabled() ? (subtotalAfterDiscount * VAT_RATE) : 0;
+  const grand = subtotalAfterDiscount + vat;
+
+  document.getElementById("subTotal").innerText = fmt(subtotal);
+  document.getElementById("discountDisplay").innerText = fmt(discountVal);
+  document.getElementById("vatAmount").innerText = fmt(vat);
+  document.getElementById("grandTotal").innerText = fmt(grand);
+}
+
+
 
 /* Update every row + totals */
 function recalcAll() {

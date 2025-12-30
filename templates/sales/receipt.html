@@ -93,10 +93,18 @@
           <td class="p-2 text-right">₵{{ subtotal_after_discount|floatformat:2 }}</td>
         </tr>
         {% endif %}
-        <tr>
+
+        {% comment %} to optionally apply vat to a specific sale {% endcomment %}
+        {% if sale.apply_vat %}
+          <tr>
+            <td colspan="3" class="p-2 text-right">VAT (15%)</td>
+            <td class="p-2 text-right">₵{{ vat|floatformat:2 }}</td>
+          </tr>
+        {% endif %}
+        {% comment %} <tr>
           <td colspan="3" class="p-2 text-right">VAT (15%)</td>
           <td class="p-2 text-right">₵{{ vat|floatformat:2 }}</td>
-        </tr>
+        </tr> {% endcomment %}
         <tr class="font-bold">
           <td colspan="3" class="p-2 text-right">Grand Total</td>
           <td class="p-2 text-right">₵{{ grand_total|floatformat:2 }}</td>

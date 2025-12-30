@@ -9,16 +9,20 @@ class SaleForm(forms.ModelForm):
     # Only used when payment_method == "credit"
     amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
     due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+    apply_vat = forms.BooleanField(required=False, initial=True)  # ✅ NEW
 
     class Meta:
         model = Sale
-        fields = ["customer_name", "customer_phone", "payment_method", "discount", "amount_paid", "due_date"]
+        fields = ["customer_name", "customer_phone", "payment_method", "discount", "apply_vat", "amount_paid", "due_date"]
 
     def clean(self):
         cleaned = super().clean()
         pm = cleaned.get("payment_method")
+        
+        cleaned["apply_vat"] = bool(cleaned.get("apply_vat"))
         amount_paid = cleaned.get("amount_paid") or Decimal("0.00")
         due_date = cleaned.get("due_date")
+         # ✅ ensure apply_vat becomes True/False cleanly
 
         if pm == "credit":
             # optional required due date (enable if client insists)

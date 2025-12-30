@@ -29,6 +29,7 @@ class Sale(models.Model):
 
     discount = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0.00"))
     subtotal_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
+    apply_vat = models.BooleanField(default=True)  # ✅ NEW
     vat_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
     total_amount = models.DecimalField(max_digits=12, decimal_places=2, default=Decimal("0.00"))
 
