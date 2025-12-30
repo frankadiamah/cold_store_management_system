@@ -9,7 +9,7 @@ class SaleForm(forms.ModelForm):
     # Only used when payment_method == "credit"
     amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
     due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    apply_vat = forms.BooleanField(required=False, initial=True)  # ✅ NEW
+    apply_vat = forms.BooleanField(required=False, initial=False)  # ✅ NEW
 
     class Meta:
         model = Sale
