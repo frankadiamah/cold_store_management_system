@@ -12,20 +12,68 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
+# BASE_DIR = Path(__file__).resolve().parent.parent
+
+
+# # Quick-start development settings - unsuitable for production
+# # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+
+# # SECURITY WARNING: keep the secret key used in production secret!
+# SECRET_KEY = 'django-insecure-@c)l9gt18la*@_1^jdof_#-h7i=tlekkk$w$=vuo!le&ii^v$&'
+
+# # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG = True
+
+# ALLOWED_HOSTS = ["*"]
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+# --------------------------
+# Helpers
+# --------------------------
+def env_bool(name: str, default: str = "False") -> bool:
+    return os.getenv(name, default).strip().lower() in ("1", "true", "yes", "on")
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+def env_csv(name: str, default: str = "") -> list[str]:
+    return [v.strip() for v in os.getenv(name, default).split(",") if v.strip()]
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-@c)l9gt18la*@_1^jdof_#-h7i=tlekkk$w$=vuo!le&ii^v$&'
+# --------------------------
+# ENV CORE
+# --------------------------
+DEBUG = env_bool("DEBUG", "True")  # Local default = True
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# Local fallback key is OK ONLY when DEBUG=True
+SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-key-change-me")
 
-ALLOWED_HOSTS = ["*"]
+# In production (DEBUG=False), force real secret key
+if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith("django-insecure")):
+    raise Exception("SECRET_KEY is missing/unsafe in production!")
+
+# IMPORTANT: Render domain must be allowed
+# On Render, you should set ALLOWED_HOSTS env var.
+# But we also add a safe default for your current service domain.
+DEFAULT_RENDER_HOST = "cold-store-management-system.onrender.com"
+
+if DEBUG:
+    ALLOWED_HOSTS = ["127.0.0.1", "localhost"]
+else:
+    ALLOWED_HOSTS = env_csv("ALLOWED_HOSTS", DEFAULT_RENDER_HOST)
+
+# CSRF must include scheme (https://...) on Django 4+
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS = [
+        "http://127.0.0.1:8000",
+        "http://localhost:8000",
+    ]
+else:
+    # On Render, set this env var to: hhttps://cold-store-management-system.onrender.com
+    CSRF_TRUSTED_ORIGINS = env_csv(
+        "CSRF_TRUSTED_ORIGINS",
+        f"https://{DEFAULT_RENDER_HOST}"
+    )
 
 
 # Application definition
@@ -81,18 +129,18 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'coldstore.wsgi.application'
- 
+
 
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
-}
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
 
 
 # Password validation
@@ -116,6 +164,27 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+
+
+# Database
+# --------------------------
+# local default = sqlite. Render = DATABASE_URL (Postgres)
+DATABASE_URL = os.getenv("DATABASE_URL", "")
+if DATABASE_URL:
+    DATABASES = {
+        "default": dj_database_url.config(
+            default=DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=True,
+        )
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/

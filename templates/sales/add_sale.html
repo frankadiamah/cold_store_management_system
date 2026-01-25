@@ -2,6 +2,172 @@
 {% load form_filters %}
 
 {% block content %}
+<div class="max-w-3xl mx-auto bg-white dark:bg-slate-900 p-6 rounded-2xl shadow-md mt-10 border border-slate-200 dark:border-slate-800">
+  <h2 class="text-xl font-semibold mb-6 text-slate-800 dark:text-slate-100">➕ Add Sale</h2>
+
+  <form method="post" id="saleForm" class="space-y-5">
+    {% csrf_token %}
+
+    <!-- Customer Name -->
+    <div>
+      <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+        {{ form.customer_name.label }}
+      </label>
+      {{ form.customer_name|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <!-- Payment Method -->
+    <div>
+      <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+        {{ form.payment_method.label }}
+      </label>
+      {{ form.payment_method|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <!-- Total Amount -->
+    <div>
+      <label class="block text-sm font-medium text-slate-600 dark:text-slate-300 mb-1">
+        {{ form.total_amount.label }}
+      </label>
+      {{ form.total_amount|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <!-- ✅ Formset management -->
+    {% if items_formset %}
+      {{ items_formset.management_form }}
+    {% endif %}
+
+    <!-- Dynamic Items -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-sm font-semibold text-slate-700 dark:text-slate-200">Items</h3>
+        <button type="button" id="addItem"
+          class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl transition font-medium">
+          + Add Item
+        </button>
+      </div>
+
+      <div id="items" class="space-y-4">
+        {% if items_formset %}
+          {% for f in items_formset.forms %}
+          <div class="item-row grid grid-cols-12 gap-3 items-end border border-slate-200 dark:border-slate-700 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:shadow-sm transition">
+            <div class="col-span-5">
+              <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Product</label>
+              {{ f.product|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+            </div>
+
+            <div class="col-span-3">
+              <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Qty</label>
+              {{ f.quantity|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+            </div>
+
+            <div class="col-span-3">
+              <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Unit Price</label>
+              {{ f.unit_price|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+            </div>
+
+            <div class="col-span-1 flex justify-end">
+              <button type="button"
+                class="remove-item px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition">
+                ✕
+              </button>
+            </div>
+          </div>
+          {% endfor %}
+        {% else %}
+          <!-- If you aren't using a formset, your old rows will still show here -->
+          <p class="text-sm text-slate-500 dark:text-slate-400">
+            items_formset not found. If you want the Django-safe dynamic add/remove, pass a formset as items_formset.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Submit Button -->
+    <div class="pt-2">
+      <button type="submit"
+        class="w-full py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-semibold transition">
+        Add Sale
+      </button>
+    </div>
+  </form>
+</div>
+
+{% if items_formset %}
+<!-- ✅ Empty form template for Django formset -->
+<template id="emptyItemTemplate">
+  <div class="item-row grid grid-cols-12 gap-3 items-end border border-slate-200 dark:border-slate-700 p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 hover:shadow-sm transition">
+    <div class="col-span-5">
+      <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Product</label>
+      {{ items_formset.empty_form.product|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <div class="col-span-3">
+      <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Qty</label>
+      {{ items_formset.empty_form.quantity|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <div class="col-span-3">
+      <label class="block text-xs text-slate-500 dark:text-slate-400 mb-1">Unit Price</label>
+      {{ items_formset.empty_form.unit_price|add_class:"w-full rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-950 text-slate-900 dark:text-slate-100 p-2 focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 outline-none" }}
+    </div>
+
+    <div class="col-span-1 flex justify-end">
+      <button type="button"
+        class="remove-item px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition">
+        ✕
+      </button>
+    </div>
+  </div>
+</template>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const addBtn = document.getElementById('addItem');
+  const itemsContainer = document.getElementById('items');
+  const totalFormsInput = document.getElementById('id_form-TOTAL_FORMS') || document.querySelector("input[name$='-TOTAL_FORMS']");
+
+  function addRow() {
+    if (!totalFormsInput) return;
+
+    const index = parseInt(totalFormsInput.value, 10);
+    const template = document.getElementById('emptyItemTemplate').innerHTML;
+    const html = template.replaceAll('__prefix__', index);
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = html.trim();
+
+    itemsContainer.appendChild(wrapper.firstElementChild);
+    totalFormsInput.value = index + 1;
+  }
+
+  addBtn?.addEventListener('click', addRow);
+
+  itemsContainer.addEventListener('click', (e) => {
+    if (e.target.classList.contains('remove-item')) {
+      const row = e.target.closest('.item-row');
+      if (!row) return;
+
+      // keep at least one row
+      if (itemsContainer.querySelectorAll('.item-row').length > 1) {
+        row.remove();
+      }
+    }
+  });
+});
+</script>
+{% endif %}
+
+{% endblock %}
+
+
+
+
+
+{% comment %} {% extends 'base.html' %}
+{% load form_filters %}
+
+{% block content %}
 <div class="max-w-3xl mx-auto bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md mt-10">
   <h2 class="text-xl font-semibold mb-6 text-slate-800 dark:text-gray-100">➕ Add Sale</h2>
 
@@ -91,7 +257,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 });
 </script>
-{% endblock %}
+{% endblock %} {% endcomment %}
 
 {% comment %} {% extends 'base.html' %}
 {% block content %}

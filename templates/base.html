@@ -1,23 +1,46 @@
 <!DOCTYPE html>
+{% load static %}
 {% load group_tags %}
 {% load role_tags %}
-<html lang="en">
+<html lang="en" class="h-full">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
+  {% comment %} <link rel="icon" type="image/png" href="{% static 'images/favicon.png' %}"> {% endcomment %}
+  <link rel="icon" type="image/x-icon" href="{% static 'images/favicon/favicon.ico' %}">
+  <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/favicon/favicon-16x16.png' %}">
+  <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/favicon/favicon-32x32.png' %}">
+  <link rel="apple-touch-icon" sizes="180x180" href="{% static 'images/favicon/apple-touch-icon.png' %}">
+
   <title>{% block title %}ColdStore — Dashboard{% endblock %}</title>
 
-  <script src="https://cdn.tailwindcss.com"></script>
 
   <!-- Apply saved theme BEFORE page paints -->
-  <script>
-    (function () {
-      const saved = localStorage.getItem("theme");
-      const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-      const theme = saved || (prefersDark ? "dark" : "light");
-      if (theme === "dark") document.documentElement.classList.add("dark");
-    })();
-  </script>
+
+
+
+ <!-- 1) Apply saved theme BEFORE anything renders -->
+<script>
+  (function () {
+    const saved = localStorage.getItem("theme");
+    const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const theme = saved || (prefersDark ? "dark" : "light");
+    if (theme === "dark") document.documentElement.classList.add("dark");
+  })();
+</script>
+
+<!-- 2) Tailwind config MUST be defined safely BEFORE CDN loads -->
+<script>
+  window.tailwind = {
+    config: {
+      darkMode: "class",
+      theme: { extend: {} }
+    }
+  };
+</script>
+
+<!-- 3) Load Tailwind CDN -->
+<script src="https://cdn.tailwindcss.com"></script>
 
   <style>
     .sidebar-scroll { height: calc(100vh - 4rem); overflow: auto; }
@@ -106,9 +129,11 @@
 
       <!-- Desktop theme toggle -->
       <button id="darkModeToggleDesktop" type="button"
-              class="p-2 rounded bg-slate-200 dark:bg-slate-700 text-sm"
-              title="Toggle theme">
-        🌓
+        class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium
+               hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
+        title="Toggle theme">
+        <span class="themeIcon">🌙</span>
+        <span class="themeText">Dark</span>
       </button>
     </div>
 
@@ -118,31 +143,29 @@
         <li><a href="{% url 'inventory_dashboard' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Dashboard</a></li>
         <li><a href="{% url 'product_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Products</a></li>
 
-        
-          <li class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500 dark:text-slate-400">
-            Price Lists
-          </li>
-          {% comment %} {% if request.user|has_group:"staff" %} {% endcomment %}
-          <li><a href="{% url 'retail_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Retail Prices</a></li>
-          {% comment %} {% endif %} {% endcomment %}
+        <li class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500 dark:text-slate-400">
+          Price Lists
+        </li>
 
-          {% if request.user|has_group:"Admin" %}
+        <li><a href="{% url 'retail_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Retail Prices</a></li>
+
+        {% if request.user|has_group:"Admin" %}
           <li><a href="{% url 'wholesale_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Wholesale Prices</a></li>
-        
-
-        <li><a href="{% url 'stock_in' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock In</a></li>
-        <li><a href="{% url 'stock_out' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock Out</a></li>
+          <li><a href="{% url 'stock_in' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock In</a></li>
+          <li><a href="{% url 'stock_out' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock Out</a></li>
         {% endif %}
+
         <li class="mt-3 pt-3 border-t border-slate-200 dark:border-slate-700 text-xs uppercase text-slate-500 dark:text-slate-400">Sales</li>
         <li><a href="{% url 'create_sale' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">➕ New Sale</a></li>
+
         {% if user.is_authenticated %}
-  <li>
-    <a href="{% url 'credit_sales_list' %}"
-       class="block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
-      💳 Credit Sales
-    </a>
-  </li>
-{% endif %}
+          <li>
+            <a href="{% url 'credit_sales_list' %}"
+               class="block px-3 py-2 rounded hover:bg-slate-100 dark:hover:bg-slate-800">
+              💳 Credit Sales
+            </a>
+          </li>
+        {% endif %}
 
         <li><a href="{% url 'sale_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">✅ Sales Records</a></li>
         <li><a href="{% url 'add_expense' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Add Expense</a></li>
@@ -153,29 +176,20 @@
         <li><a href="{% url 'my_attendance' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">My Attendance</a></li>
 
         {% if request.user|has_group:"Admin" or request.user|has_group:"Accountant" %}
-          <!-- ✅ Vehicle assets app link -->
           <li><a href="{% url 'assets:vehicle_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">🚗 Company Cars</a></li>
-        
 
-          {% comment %} 
-G) Sidebar / base.html: show the menu to SubAdmin (since they can access), BUT the data will still be scoped
-So you do not need to hide Analytics/Reports/Stock/Finance links.
-Even if SubAdmin clicks them, they only see their own records.
-          {% endcomment %}
+          {% is_super_admin request.user as superadmin %}
 
-      {% is_super_admin request.user as superadmin %}
+          {% if superadmin %}
+            <li><a href="{% url 'analytics_dashboard' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Analytics</a></li>
+            <li><a href="{% url 'reports_summary' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Reports</a></li>
+            <li><a href="{% url 'finance:account_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Finance</a></li>
+          {% endif %}
 
-      {% if superadmin %}
-        <a href="{% url 'analytics_dashboard' %}">Analytics</a>
-        <a href="{% url 'reports_summary' %}">Reports</a>
-        <a href="{% url 'finance:account_list' %}">Finance</a>
-      {% endif %}
-
-
-        <li><a href="{% url 'finance:account_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Finance</a></li>
-        <li><a href="{% url 'reports_summary' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Reports</a></li>
-        <li><a href="{% url 'analytics_dashboard' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Analytics</a></li>
-      {% endif %}
+          {% comment %} <li><a href="{% url 'finance:account_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Finance</a></li> {% endcomment %}
+          {% comment %} <li><a href="{% url 'reports_summary' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Reports</a></li> {% endcomment %}
+          {% comment %} <li><a href="{% url 'analytics_dashboard' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Analytics</a></li> {% endcomment %}
+        {% endif %}
       </ul>
     </nav>
 
@@ -193,7 +207,9 @@ Even if SubAdmin clicks them, they only see their own records.
   </aside>
 
   <!-- Main -->
-  <div class="flex-1">
+  {% comment %} <div class="flex-1"> {% endcomment %}
+    <div class="flex-1 bg-slate-50 dark:bg-slate-950 transition-colors duration-300">
+
 
     <!-- Topbar for small screens -->
     <header class="md:hidden bg-white dark:bg-slate-900 border-b dark:border-slate-700 p-3 flex items-center justify-between">
@@ -201,20 +217,29 @@ Even if SubAdmin clicks them, they only see their own records.
         <button id="mobileMenuBtn" class="p-2 rounded bg-slate-100 dark:bg-slate-800">☰</button>
         <a href="{% url 'inventory_dashboard' %}" class="font-semibold text-slate-800 dark:text-slate-100">ColdStore</a>
       </div>
+
       <div class="flex items-center gap-2">
         <!-- Mobile theme toggle -->
-        <button id="darkModeToggleMobile" class="p-2 rounded bg-slate-200 dark:bg-slate-700 text-sm">🌓</button>
+        <button id="darkModeToggleMobile" type="button"
+          class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium
+                 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">
+          <span class="themeIcon">🌙</span>
+          <span class="themeText">Dark</span>
+        </button>
+
         <a href="{% url 'users:dashboard' %}" class="text-sm text-slate-800 dark:text-slate-100">Profile</a>
       </div>
     </header>
 
     <main class="p-6">
-      {% block content %}{% endblock %}
+      {% block content %}
+      
+      {% endblock %}
     </main>
   </div>
 </div>
 
-<!-- Toast notifications (single version) -->
+<!-- Toast notifications -->
 {% if messages %}
   <div id="toast-container" class="fixed top-4 right-4 space-y-2 z-50">
     {% for message in messages %}
@@ -226,6 +251,7 @@ Even if SubAdmin clicks them, they only see their own records.
       </div>
     {% endfor %}
   </div>
+
 
   <script>
     setTimeout(() => {
@@ -245,12 +271,22 @@ Even if SubAdmin clicks them, they only see their own records.
     });
   }
 
-  // Theme toggle (works for both buttons)
+  // ✅ Theme toggle + keep both buttons in sync
+  function setThemeUI() {
+    const isDark = document.documentElement.classList.contains('dark');
+    document.querySelectorAll('.themeIcon').forEach(el => el.textContent = isDark ? '☀️' : '🌙');
+    document.querySelectorAll('.themeText').forEach(el => el.textContent = isDark ? 'Light' : 'Dark');
+  }
+
   function toggleTheme() {
     const htmlEl = document.documentElement;
     htmlEl.classList.toggle('dark');
     localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
+    setThemeUI();
   }
+
+  // set correct label/icon on page load
+  setThemeUI();
 
   const tMobile = document.getElementById('darkModeToggleMobile');
   if (tMobile) tMobile.addEventListener('click', toggleTheme);

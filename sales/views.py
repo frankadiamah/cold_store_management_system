@@ -4,7 +4,11 @@ from io import BytesIO
 import base64
 from urllib import request
 import qrcode
-
+from datetime import datetime, timedelta
+from django.core.paginator import Paginator
+from django.db.models import Q
+from django.shortcuts import render
+from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.forms import formset_factory
@@ -212,14 +216,92 @@ def create_sale(request):
 @has_any_group("SuperAdmin", "SubAdmin","Admin", "Staff", "Retail", "Wholesale")
 def sale_list(request):
     qs = Sale.objects.all().order_by("-timestamp")
-    # qs = visible_queryset_for_user(qs, request.user)
 
+    # ✅ Keep your existing role filtering
     if request.user.groups.filter(name="Wholesale").exists():
         qs = qs.filter(sale_type="wholesale")
     elif request.user.groups.filter(name="Retail").exists():
         qs = qs.filter(sale_type="retail")
 
-    return render(request, "sales/sale_list.html", {"sales": qs})
+    # ---------------------------
+    # Filters (GET)
+    # ---------------------------
+    q = (request.GET.get("q") or "").strip()
+    start = (request.GET.get("start") or "").strip()    # YYYY-MM-DD
+    end = (request.GET.get("end") or "").strip()        # YYYY-MM-DD
+    preset = (request.GET.get("preset") or "").strip()  # today | week | month | all
+    per_page = request.GET.get("per_page") or "10"
+
+    # Search by customer name/phone
+    if q:
+        qs = qs.filter(
+            Q(customer_name__icontains=q) |
+            Q(customer_phone__icontains=q)
+        )
+
+    # Date presets
+    now = timezone.localtime()
+    today = now.date()
+
+    if preset == "today":
+        qs = qs.filter(timestamp__date=today)
+
+    elif preset == "week":
+        start_date = today - timedelta(days=6)
+        qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
+
+    elif preset == "month":
+        start_date = today - timedelta(days=29)
+        qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
+
+    elif preset == "all":
+        pass
+
+    else:
+        # Custom dates
+        try:
+            if start:
+                start_date = datetime.strptime(start, "%Y-%m-%d").date()
+                qs = qs.filter(timestamp__date__gte=start_date)
+            if end:
+                end_date = datetime.strptime(end, "%Y-%m-%d").date()
+                qs = qs.filter(timestamp__date__lte=end_date)
+        except ValueError:
+            pass
+
+    # Per-page safety
+    try:
+        per_page_int = int(per_page)
+        if per_page_int not in (10, 25, 50, 100):
+            per_page_int = 10
+    except ValueError:
+        per_page_int = 10
+
+    # ✅ Pagination (IMPORTANT: don't name variable "paginator" if you imported Paginator)
+    p = Paginator(qs, per_page_int)
+    page_number = request.GET.get("page") or 1
+    page_obj = p.get_page(page_number)
+
+    return render(request, "sales/sale_list.html", {
+        "sales": page_obj.object_list,
+        "page_obj": page_obj,
+        "q": q,
+        "start": start,
+        "end": end,
+        "preset": preset,
+        "per_page": per_page_int,
+        "total_count": p.count,
+    })
+# def sale_list(request):
+#     qs = Sale.objects.all().order_by("-timestamp")
+#     # qs = visible_queryset_for_user(qs, request.user)
+
+#     if request.user.groups.filter(name="Wholesale").exists():
+#         qs = qs.filter(sale_type="wholesale")
+#     elif request.user.groups.filter(name="Retail").exists():
+#         qs = qs.filter(sale_type="retail")
+
+#     return render(request, "sales/sale_list.html", {"sales": qs})
 
 
 @login_required

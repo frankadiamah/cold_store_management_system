@@ -6,6 +6,401 @@
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
+<style>
+  /* Make Select2 blend with your theme */
+  .select2-container .select2-selection--single {
+    height: 44px;
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1; /* slate-300 */
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+  }
+  .dark .select2-container .select2-selection--single {
+    background: #0f172a;       /* slate-900/950 area */
+    border-color: #334155;     /* slate-700 */
+    color: #e2e8f0;            /* slate-200 */
+  }
+  .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 42px;
+    padding-left: 0;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 42px;
+  }
+  .select2-dropdown {
+    border-radius: 0.75rem;
+    border: 1px solid #cbd5e1;
+    overflow: hidden;
+  }
+  .dark .select2-dropdown {
+    background: #0b1220;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+  .dark .select2-results__option--highlighted.select2-results__option--selectable {
+    background: #1e293b; /* slate-800 */
+  }
+</style>
+
+<div class="max-w-5xl mx-auto mt-8 p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold text-slate-800 dark:text-white">🧾 Create Sale</h2>
+    <div class="text-sm text-slate-600 dark:text-slate-300">
+      Sale Type: <b>{{ sale_type|title }}</b>
+    </div>
+  </div>
+
+  <form method="post" id="saleForm" class="space-y-6">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    <!-- Sale Info -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm text-slate-700 dark:text-slate-200">Customer Name</label>
+        {{ sale_form.customer_name|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-700 dark:text-slate-200">Customer Phone</label>
+        {{ sale_form.customer_phone|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-700 dark:text-slate-200">Payment Method</label>
+        {{ sale_form.payment_method|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <!-- Credit-only -->
+      <div id="creditFields" class="hidden grid grid-cols-1 gap-4 sm:col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label class="text-sm text-slate-700 dark:text-slate-200">Amount Paid Now (₵) - optional</label>
+            {{ sale_form.amount_paid|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+          </div>
+          <div>
+            <label class="text-sm text-slate-700 dark:text-slate-200">Due Date (optional)</label>
+            {{ sale_form.due_date|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <label class="text-sm text-slate-700 dark:text-slate-200">Discount (₵)</label>
+        {{ sale_form.discount|add_class:"w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:border-blue-500 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div class="flex items-center gap-2 sm:col-span-1">
+        {{ sale_form.apply_vat|add_class:"h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30 dark:border-slate-600 dark:bg-slate-950" }}
+        <label class="text-sm text-slate-700 dark:text-slate-200">Apply VAT</label>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold text-slate-800 dark:text-white mb-3">🧺 Items</h3>
+
+      <div id="itemsWrap" class="space-y-3">
+        {% for form in formset %}
+        <div class="item-row border border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-800">
+          <div class="flex flex-col lg:grid lg:grid-cols-12 gap-3 items-end">
+
+            <div class="w-full lg:col-span-4">
+              <label class="text-sm text-slate-700 dark:text-slate-200">Product</label>
+              {{ form.product|add_class:"product-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+            </div>
+
+            <div class="w-full lg:col-span-3">
+              <label class="text-sm text-slate-700 dark:text-slate-200">Weight Size</label>
+              <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Only for boxed-weight products</p>
+              {{ form.weight_price|add_class:"weight-size-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+            </div>
+
+            <div class="w-full lg:col-span-2">
+              <label class="text-sm text-slate-700 dark:text-slate-200">Qty</label>
+              {{ form.quantity|add_class:"qty-input w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+            </div>
+
+            <div class="w-full lg:col-span-2">
+              <label class="text-sm text-slate-700 dark:text-slate-200">Unit Price (₵)</label>
+              {{ form.unit_price|add_class:"price-input w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+            </div>
+
+            <div class="w-full lg:col-span-1 flex justify-end">
+              <button type="button"
+                class="remove-row px-3 sm:px-4 py-2 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm sm:text-base">
+                ✖
+              </button>
+            </div>
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <button type="button" id="addItemBtn"
+        class="mt-3 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-xl font-medium">
+        + Add Item
+      </button>
+    </div>
+
+    <!-- Summary -->
+    <div class="mt-6 flex justify-end">
+      <div class="w-full sm:w-96 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-white dark:bg-slate-900">
+        <div class="text-sm sm:text-base font-semibold mb-3 text-slate-800 dark:text-white">Summary</div>
+
+        <div class="flex justify-between py-1 text-slate-700 dark:text-slate-200">
+          <span>Subtotal</span>
+          <span>₵ <span id="subtotalAmount">0.00</span></span>
+        </div>
+
+        <div class="flex justify-between py-1 text-slate-700 dark:text-slate-200">
+          <span>Discount</span>
+          <span>₵ <span id="discountAmount">0.00</span></span>
+        </div>
+
+        <div class="flex justify-between py-1 text-slate-700 dark:text-slate-200">
+          <span>VAT (<span id="vatRateLabel">0%</span>)</span>
+          <span>₵ <span id="vatAmount">0.00</span></span>
+        </div>
+
+        <div class="border-t border-slate-200 dark:border-slate-700 mt-3 pt-3 flex justify-between font-bold text-lg text-slate-900 dark:text-white">
+          <span>Grand Total</span>
+          <span>₵ <span id="grandTotal">0.00</span></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="w-full mt-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold">
+      Save & Print Receipt
+    </button>
+  </form>
+</div>
+
+<!-- ✅ Proper formset template (Django-safe) -->
+<template id="emptyFormTemplate">
+  <div class="item-row border border-slate-200 dark:border-slate-700 rounded-2xl p-4 bg-slate-50 dark:bg-slate-800">
+    <div class="flex flex-col lg:grid lg:grid-cols-12 gap-3 items-end">
+
+      <div class="w-full lg:col-span-4">
+        <label class="text-sm text-slate-700 dark:text-slate-200">Product</label>
+        {{ formset.empty_form.product|add_class:"product-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div class="w-full lg:col-span-3">
+        <label class="text-sm text-slate-700 dark:text-slate-200">Weight Size</label>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">Only for boxed-weight products</p>
+        {{ formset.empty_form.weight_price|add_class:"weight-size-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div class="w-full lg:col-span-2">
+        <label class="text-sm text-slate-700 dark:text-slate-200">Qty</label>
+        {{ formset.empty_form.quantity|add_class:"qty-input w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div class="w-full lg:col-span-2">
+        <label class="text-sm text-slate-700 dark:text-slate-200">Unit Price (₵)</label>
+        {{ formset.empty_form.unit_price|add_class:"price-input w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+      </div>
+
+      <div class="w-full lg:col-span-1 flex justify-end">
+        <button type="button"
+          class="remove-row px-3 sm:px-4 py-2 sm:py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl text-sm sm:text-base">
+          ✖
+        </button>
+      </div>
+
+    </div>
+  </div>
+</template>
+
+<script>
+  const WEIGHTS = {{ weights_json|safe }};
+  const SALE_TYPE = "{{ sale_type }}";
+
+  // ✅ IMPORTANT: Make VAT match your backend (must match sales/views.py)
+  const VAT_RATE = 0.04;
+
+  function initSelect2(scope){
+    $(scope).find("select.product-select").select2({ width: "100%" });
+    $(scope).find("select.weight-size-select").select2({ width: "100%" });
+  }
+
+  function isBoxed(productId){
+    return (WEIGHTS[String(productId)] || []).length > 0;
+  }
+
+  function lockPrice(row, locked){
+    const price = $(row).find("input.price-input");
+    if (locked){
+      price.prop("readonly", true);
+      price.addClass("cursor-not-allowed opacity-80");
+    } else {
+      price.prop("readonly", false);
+      price.removeClass("cursor-not-allowed opacity-80");
+    }
+  }
+
+  function clearWeight(row){
+    const sizeSelect = $(row).find("select.weight-size-select");
+    sizeSelect.val("").trigger("change.select2");
+  }
+
+  function populateSizes(row){
+    const productId = $(row).find("select.product-select").val();
+    const sizeSelect = $(row).find("select.weight-size-select");
+    const unitPrice = $(row).find("input.price-input");
+
+    sizeSelect.empty();
+
+    if (!productId || !isBoxed(productId)) {
+      // unit product
+      sizeSelect.append(new Option("—", "", true, true));
+      sizeSelect.prop("disabled", true);
+      clearWeight(row);
+
+      unitPrice.val("0.00");
+      lockPrice(row, true);
+      return;
+    }
+
+    // boxed-weight product
+    sizeSelect.prop("disabled", false);
+    sizeSelect.append(new Option("Select size", "", true, true));
+
+    const sizes = WEIGHTS[String(productId)] || [];
+    sizes.forEach(s => {
+      const price = (SALE_TYPE === "wholesale") ? s.wholesale_price : s.retail_price;
+      const opt = new Option(`${s.label} — ₵${Number(price).toFixed(2)}`, s.id, false, false);
+      $(opt).attr("data-price", price);
+      sizeSelect.append(opt);
+    });
+
+    unitPrice.val("0.00");
+    lockPrice(row, true);
+  }
+
+  function updatePriceFromSize(row){
+    const sizeSelect = $(row).find("select.weight-size-select");
+    const selected = sizeSelect.find(":selected");
+    const price = selected.attr("data-price");
+    const unitPrice = $(row).find("input.price-input");
+    if (price) unitPrice.val(Number(price).toFixed(2));
+    else unitPrice.val("0.00");
+    lockPrice(row, true);
+  }
+
+  function calcTotals(){
+    let subtotal = 0;
+
+    $(".item-row").each(function(){
+      const qty = Number($(this).find("input.qty-input").val() || 0);
+      const price = Number($(this).find("input.price-input").val() || 0);
+      subtotal += (qty * price);
+    });
+
+    const discount = Number($("input[name='discount']").val() || 0);
+
+    let afterDiscount = subtotal - discount;
+    if (afterDiscount < 0) afterDiscount = 0;
+
+    const applyVat = $("input[name='apply_vat']").is(":checked");
+    const vat = applyVat ? (afterDiscount * VAT_RATE) : 0;
+    const grand = afterDiscount + vat;
+
+    $("#vatRateLabel").text((VAT_RATE * 100).toFixed(0) + "%");
+
+    $("#subtotalAmount").text(subtotal.toFixed(2));
+    $("#discountAmount").text(discount.toFixed(2));
+    $("#vatAmount").text(vat.toFixed(2));
+    $("#grandTotal").text(grand.toFixed(2));
+  }
+
+  function toggleCreditFields(){
+    const pm = $("select[name='payment_method']").val();
+    if (pm === "credit"){
+      $("#creditFields").removeClass("hidden");
+    } else {
+      $("#creditFields").addClass("hidden");
+      $("input[name='amount_paid']").val("");
+      $("input[name='due_date']").val("");
+    }
+  }
+
+  function addNewRow(){
+    const totalForms = $("#id_form-TOTAL_FORMS");
+    const index = parseInt(totalForms.val(), 10);
+
+    const templateHtml = $("#emptyFormTemplate").html().replace(/__prefix__/g, index);
+    const $row = $(templateHtml);
+
+    $row.find("input.qty-input").val("");
+    $row.find("input.price-input").val("0.00");
+
+    $("#itemsWrap").append($row);
+    totalForms.val(index + 1);
+
+    initSelect2($row);
+    populateSizes($row);
+    calcTotals();
+  }
+
+  $(document).ready(function(){
+    initSelect2(document);
+
+    $(".price-input").prop("readonly", true).addClass("cursor-not-allowed opacity-80");
+
+    $(".item-row").each(function(){ populateSizes(this); });
+
+    $("#itemsWrap").on("change", "select.product-select", function(){
+      const row = $(this).closest(".item-row");
+      populateSizes(row);
+      calcTotals();
+    });
+
+    $("#itemsWrap").on("change", "select.weight-size-select", function(){
+      const row = $(this).closest(".item-row");
+      updatePriceFromSize(row);
+      calcTotals();
+    });
+
+    $("#itemsWrap").on("input", "input.qty-input, input[name='discount']", function(){
+      calcTotals();
+    });
+
+    $("input[name='apply_vat']").on("change", calcTotals);
+
+    $("#itemsWrap").on("click", ".remove-row", function(){
+      const rows = $(".item-row");
+      if (rows.length > 1){
+        $(this).closest(".item-row").remove();
+        calcTotals();
+      }
+    });
+
+    $("#addItemBtn").on("click", addNewRow);
+
+    toggleCreditFields();
+    $("select[name='payment_method']").on("change", toggleCreditFields);
+
+    calcTotals();
+  });
+</script>
+
+{% endblock %}
+
+
+
+
+{% comment %} {% extends "base.html" %}
+{% load form_filters %}
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
 <div class="max-w-5xl mx-auto mt-8 p-4 sm:p-6 bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800">
   <div class="flex items-center justify-between mb-6">
     <h2 class="text-2xl font-bold dark:text-white">🧾 Create Sale</h2>
@@ -67,31 +462,31 @@
       <div id="itemsWrap" class="space-y-3">
         {% for form in formset %}
         <div class="item-row border rounded-xl p-4 bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
-          <div class="flex flex-col lg:grid lg:grid-cols-12 gap-3 items-end">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
 
-            <div class="w-full lg:col-span-4">
+            <div class="md:col-span-4">
               <label class="text-sm sm:text-base dark:text-slate-200">Product</label>
               {{ form.product|add_class:"product-select w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
             </div>
 
-            <div class="w-full lg:col-span-3">
+            <div class="md:col-span-3">
               <label class="text-sm sm:text-base dark:text-slate-200">Weight Size</label>
               <p class="text-xs sm:text-sm text-slate-500 mt-1">Only for boxed-weight products</p>
               {{ form.weight_price|add_class:"weight-size-select w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
             </div>
 
-            <div class="w-full lg:col-span-2">
+            <div class="md:col-span-2">
               <label class="text-sm sm:text-base dark:text-slate-200">Qty</label>
               {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 sm:p-3 border dark:bg-gray-700 dark:text-white" }}
             </div>
 
-            <div class="w-full lg:col-span-2">
+            <div class="md:col-span-2">
               <label class="text-sm sm:text-base dark:text-slate-200">Unit Price (₵)</label>
-              {% comment %} <p class="text-xs sm:text-sm text-slate-500 mt-1">Auto-filled</p> {% endcomment %}
+              {% comment %} <p class="text-xs sm:text-sm text-slate-500 mt-1">Auto-filled</p>  
               {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
             </div>
 
-            <div class="w-full lg:col-span-1 flex justify-end">
+            <div class="md:col-span-1 flex justify-end">
               <button type="button" class="remove-row px-3 sm:px-4 py-2 sm:py-3 bg-red-600 text-white rounded-lg text-sm sm:text-base">✖</button>
             </div>
 
@@ -141,31 +536,31 @@
 <!-- ✅ Proper formset template (Django-safe) -->
 <template id="emptyFormTemplate">
   <div class="item-row border rounded-xl p-4 bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
-    <div class="flex flex-col lg:grid lg:grid-cols-12 gap-3 items-end">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
 
-      <div class="w-full lg:col-span-4">
+      <div class="md:col-span-4">
         <label class="text-sm sm:text-base dark:text-slate-200">Product</label>
         {{ formset.empty_form.product|add_class:"product-select w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
       </div>
 
-      <div class="w-full lg:col-span-3">
+      <div class="md:col-span-3">
         <label class="text-sm sm:text-base dark:text-slate-200">Weight Size</label>
         {{ formset.empty_form.weight_price|add_class:"weight-size-select w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
         <p class="text-xs sm:text-sm text-slate-500 mt-1">Only for boxed-weight products</p>
       </div>
 
-      <div class="w-full lg:col-span-2">
+      <div class="md:col-span-2">
         <label class="text-sm sm:text-base dark:text-slate-200">Qty</label>
         {{ formset.empty_form.quantity|add_class:"qty-input w-full rounded-lg p-2 sm:p-3 border dark:bg-gray-700 dark:text-white" }}
       </div>
 
-      <div class="w-full lg:col-span-2">
+      <div class="md:col-span-2">
         <label class="text-sm sm:text-base dark:text-slate-200">Unit Price (₵)</label>
         {{ formset.empty_form.unit_price|add_class:"price-input w-full rounded-lg p-2 sm:p-3 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
         <p class="text-xs sm:text-sm text-slate-500 mt-1">Auto-filled</p>
       </div>
 
-      <div class="w-full lg:col-span-1 flex justify-end">
+      <div class="md:col-span-1 flex justify-end">
         <button type="button" class="remove-row px-3 sm:px-4 py-2 sm:py-3 bg-red-600 text-white rounded-lg text-sm sm:text-base">✖</button>
       </div>
 
@@ -234,7 +629,7 @@
     const sizes = WEIGHTS[String(productId)] || [];
     sizes.forEach(s => {
       const price = (SALE_TYPE === "wholesale") ? s.wholesale_price : s.retail_price;
-      const opt = new Option(`${s.label} — ₵${Number(price).toFixed(2)}`, s.id, false, false);
+      const opt = new Option(${s.label} — ₵${Number(price).toFixed(2)}, s.id, false, false);
       $(opt).attr("data-price", price);
       sizeSelect.append(opt);
     });
@@ -355,296 +750,4 @@
   });
 </script>
 
-{% endblock %}
-
-
-
-
-
-
-<!-- 
-{% load form_filters %}
-{% comment %} {% block content %} {% endcomment %}
-
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
-
-<div class="max-w-5xl mx-auto mt-8 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800">
-  <div class="flex items-center justify-between mb-6">
-    <h2 class="text-2xl font-bold dark:text-white">🧾 Create Sale</h2>
-    <div class="text-sm text-slate-600 dark:text-slate-300">Sale Type: <b>{{ sale_type|title }}</b></div>
-  </div>
-
-  <form method="post" id="saleForm" class="space-y-6">
-    {% csrf_token %}
-    {{ formset.management_form }}          
-    <!-- Sale Info ->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      <div>
-        <label class="text-sm dark:text-slate-200">Customer Name</label>
-        {% comment %} {{ sale_form.customer_name }} {% endcomment %}
-        {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
-
-      </div>
-      <div>
-        <label class="text-sm dark:text-slate-200">Customer Phone</label>
-        {% comment %} {{ sale_form.customer_phone }} {% endcomment %}
-        {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
-
-      </div>
-
-      <div>
-        <label class="text-sm dark:text-slate-200">Payment Method</label>
-        {% comment %} {{ sale_form.payment_method }} {% endcomment %}
-        {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
- 
-      </div>
-      <div>
-        <label class="text-sm dark:text-slate-200">Amount Paid Now (₵) - optional</label>
-        {% comment %} {{ sale_form.amount_paid }} {% endcomment %}
-        {{ sale_form.amount_paid|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
-
-      </div>
-
-      <div>
-        <label class="text-sm dark:text-slate-200">Due Date (optional)</label>
-        {% comment %} {{ sale_form.due_date }} {% endcomment %}
-        {{ sale_form.due_date|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
-
-      </div>
-      <div>
-        <label class="text-sm dark:text-slate-200">Discount (₵)</label>
-        {% comment %} {{ sale_form.discount }} {% endcomment %}
-        {{ sale_form.discount|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
-      </div>
-
-      <div class="flex items-center gap-2">
-        {{ sale_form.apply_vat }}
-        <label class="text-sm dark:text-slate-200">Apply VAT (15%)</label>
-      </div>
-    </div>
-
-    <!-- Items ->
-    <div class="mt-6">
-      <h3 class="text-lg font-semibold dark:text-white mb-3">🧺 Items</h3>
-
-
-      <div id="itemsWrap" class="space-y-3">
-        {% for form in formset %}
-        <div class="item-row border rounded-xl p-4 bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
-          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
-
-            <div class="md:col-span-4">
-              <label class="text-sm dark:text-slate-200">Product</label>
-              {% comment %} {{ form.product }} {% endcomment %}
-          {{ form.product|add_class:"product-select w-full rounded-lg p-2 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
-
-            </div>
-
-            <div class="md:col-span-3">
-              <label class="text-sm dark:text-slate-200">Weight Size</label>
-              {% comment %} {{ form.weight_size }} {% endcomment %}
-          {{ form.weight_price|add_class:"weight-size-select w-full rounded-lg p-2 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
-
-              {% comment %} <p class="text-xs text-slate-500 mt-1">Only for boxed-weight products</p> {% endcomment %}
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="text-sm dark:text-slate-200">Qty</label>
-              {% comment %} {{ form.quantity }} {% endcomment %}
-              {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 border dark:bg-gray-700 dark:text-white" }}
-
-            </div>
-
-            <div class="md:col-span-2">
-              <label class="text-sm dark:text-slate-200">Unit Price (₵)</label>
-              {% comment %} {{ form.unit_price }} {% endcomment %}
-              {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
-
-            </div>
-
-            <div class="md:col-span-1 flex justify-end">
-              <button type="button" class="remove-row px-3 py-2 bg-red-600 text-white rounded-lg">✖</button>
-            </div>
-
-          </div>
-        </div>
-        {% endfor %}
-      </div>
-
-      <button type="button" id="addItemBtn" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg">
-        + Add Item
-      </button>
-    </div>
-
-    {% comment %}  Summary -> {% endcomment %}
-    <div class="mt-6 flex justify-end">
-      <div class="w-full md:w-96 border rounded-2xl p-4 bg-white dark:bg-slate-900 dark:border-slate-700">
-        <div class="text-sm font-semibold mb-3 dark:text-white">Summary</div>
-
-        <div class="flex justify-between py-1">
-          <span>Subtotal</span>
-          <span>₵ <span id="subtotalAmount">0.00</span></span>
-        </div>
-
-        <div class="flex justify-between py-1">
-          <span>Discount</span>
-          <span>₵ <span id="discountAmount">0.00</span></span>
-        </div>
-
-        <div class="flex justify-between py-1">
-          <span>VAT (15%)</span>
-          <span>₵ <span id="vatAmount">0.00</span></span>
-        </div>
-
-        <div class="border-t mt-3 pt-3 flex justify-between font-bold text-lg dark:text-white">
-          <span>Grand Total</span>
-          <span>₵ <span id="grandTotal">0.00</span></span>
-        </div>
-      </div>
-    </div>
-
-    <button class="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl font-bold">
-      Save & Print Receipt
-    </button>
-  </form>
-</div>
-
-
-<script>
-  const WEIGHTS = {{ weights_json|safe }};
-  const SALE_TYPE = "{{ sale_type }}"; // retail or wholesale
-
-  // select2 searchable product dropdown
-  function initSelect2(scope){
-    $(scope).find("select.product-select").select2({ width: "100%" });
-    $(scope).find("select.weight-size-select").select2({ width: "100%" });
-  }
-
-  function isBoxed(productId){
-    // if weights exist for product => treat as boxed-weight
-    return (WEIGHTS[String(productId)] || []).length > 0;
-  }
-
-  function populateSizes(row){
-    const productId = $(row).find("select.product-select").val();
-    const sizeSelect = $(row).find("select.weight-size-select");
-    const unitPrice = $(row).find("input.price-input");
-
-    sizeSelect.empty();
-
-    if (!productId || !isBoxed(productId)) {
-      // unit product
-      sizeSelect.append(new Option("—", "", true, true));
-      sizeSelect.prop("disabled", true);
-      unitPrice.val(unitPrice.val() || "0.00");
-      return;
-    }
-
-    sizeSelect.prop("disabled", false);
-    sizeSelect.append(new Option("Select size", "", true, true));
-
-    const sizes = WEIGHTS[String(productId)];
-    sizes.forEach(s => {
-      const price = (SALE_TYPE === "wholesale") ? s.wholesale_price : s.retail_price;
-      const opt = new Option(`${s.label} — ₵${price.toFixed(2)}`, s.id, false, false);
-      $(opt).attr("data-price", price);
-      sizeSelect.append(opt);
-    });
-
-    // clear price until a size is chosen
-    unitPrice.val("0.00");
-  }
-
-  function updatePriceFromSize(row){
-    const sizeSelect = $(row).find("select.weight-size-select");
-    const selected = sizeSelect.find(":selected");
-    const price = selected.attr("data-price");
-    const unitPrice = $(row).find("input.price-input");
-    if (price) unitPrice.val(Number(price).toFixed(2));
-  }
-
-  function calcTotals(){
-    let subtotal = 0;
-
-    $(".item-row").each(function(){
-      const qty = Number($(this).find("input.qty-input").val() || 0);
-      const price = Number($(this).find("input.price-input").val() || 0);
-      subtotal += (qty * price);
-    });
-
-    const discount = Number($("input[name='discount']").val() || 0);
-
-    let afterDiscount = subtotal - discount;
-    if (afterDiscount < 0) afterDiscount = 0;
-
-    const applyVat = $("input[name='apply_vat']").is(":checked");
-    const vat = applyVat ? (afterDiscount * 0.15) : 0;
-    const grand = afterDiscount + vat;
-
-    $("#subtotalAmount").text(subtotal.toFixed(2));
-    $("#discountAmount").text(discount.toFixed(2));
-    $("#vatAmount").text(vat.toFixed(2));
-    $("#grandTotal").text(grand.toFixed(2));
-  }
-
-  // init
-  $(document).ready(function(){
-    initSelect2(document);
-
-    // style inputs quickly
-    $("input, select").addClass("w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white");
-
-    // initial bind
-    $("#itemsWrap").on("change", "select.product-select", function(){
-      const row = $(this).closest(".item-row");
-      populateSizes(row);
-      calcTotals();
-    });
-
-    $("#itemsWrap").on("change", "select.weight-size-select", function(){
-      const row = $(this).closest(".item-row");
-      updatePriceFromSize(row);
-      calcTotals();
-    });
-
-    $("#itemsWrap").on("input", "input.qty-input, input[name='discount']", function(){
-      calcTotals();
-    });
-
-    $("input[name='apply_vat']").on("change", calcTotals);
-
-    $("#itemsWrap").on("click", ".remove-row", function(){
-      const rows = $(".item-row");
-      if (rows.length > 1){
-        $(this).closest(".item-row").remove();
-        calcTotals();
-      }
-    });
-
-    // add new row (clone last)
-    $("#addItemBtn").on("click", function(){
-      const last = $(".item-row:last");
-      const clone = last.clone();
-
-      // clear values
-      clone.find("input.qty-input").val("");
-      clone.find("input.price-input").val("0.00");
-      clone.find("select.product-select").val("").trigger("change");
-      clone.find("select.weight-size-select").empty().append(new Option("—", "", true, true)).prop("disabled", true);
-
-      $("#itemsWrap").append(clone);
-      initSelect2(clone);
-      calcTotals();
-    });
-
-    // first row disable weight until product chosen
-    $(".item-row").each(function(){ populateSizes(this); });
-    calcTotals();
-  });
-</script>
-{% comment %} {% endblock %} {% endcomment %}
-
-
-!SECTION-->
+{% endblock %} {% endcomment %}
