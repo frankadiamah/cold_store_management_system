@@ -1,0 +1,327 @@
+{% extends "base.html" %}
+{% load form_filters %}
+{% block content %}
+
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<div class="max-w-5xl mx-auto mt-8 p-6 bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800">
+  <div class="flex items-center justify-between mb-6">
+    <h2 class="text-2xl font-bold dark:text-white">🧾 Create Sale</h2>
+    <div class="text-sm text-slate-600 dark:text-slate-300">Sale Type: <b>{{ sale_type|title }}</b></div>
+  </div>
+
+  <form method="post" id="saleForm" class="space-y-6">
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+    <!-- Sale Info -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm dark:text-slate-200">Customer Name</label>
+        {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm dark:text-slate-200">Customer Phone</label>
+        {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm dark:text-slate-200">Payment Method</label>
+        {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm dark:text-slate-200">Amount Paid Now (₵) - optional</label>
+        {{ sale_form.amount_paid|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm dark:text-slate-200">Due Date (optional)</label>
+        {{ sale_form.due_date|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div>
+        <label class="text-sm dark:text-slate-200">Discount (₵)</label>
+        {{ sale_form.discount|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+
+      <div class="flex items-center gap-2">
+        {{ sale_form.apply_vat }}
+        <label class="text-sm dark:text-slate-200">Apply VAT (15%)</label>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="mt-6">
+      <h3 class="text-lg font-semibold dark:text-white mb-3">🧺 Items</h3>
+
+      <div id="itemsWrap" class="space-y-3">
+        {% for form in formset %}
+        <div class="item-row border rounded-xl p-4 bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+
+            <div class="md:col-span-5">
+              <label class="text-sm dark:text-slate-200">Product</label>
+              {{ form.product|add_class:"product-select w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+            </div>
+
+            <div class="md:col-span-4">
+              <label class="text-sm dark:text-slate-200">Weight Size</label>
+              {{ form.weight_price|add_class:"weight-select w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+              <p class="text-xs text-slate-500 mt-1">Select weight size (e.g 5kg, 10kg, 20kg)</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="text-sm dark:text-slate-200">Qty</label>
+              {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+              <p class="text-xs text-slate-500 mt-1">Qty is “number of selected weight”</p>
+            </div>
+
+            <div class="md:col-span-1 flex justify-end">
+              <button type="button" class="remove-row px-3 py-2 bg-red-600 text-white rounded-lg">✖</button>
+            </div>
+
+            <!-- hidden display fields -->
+            <input type="hidden" class="row-unit-price" value="0">
+            <input type="hidden" class="row-weight-kg" value="0">
+
+          </div>
+        </div>
+        {% endfor %}
+      </div>
+
+      <!-- Empty form template for formset -->
+      <template id="emptyFormTemplate">
+        <div class="item-row border rounded-xl p-4 bg-slate-50 dark:bg-slate-800 dark:border-slate-700">
+          <div class="grid grid-cols-1 md:grid-cols-12 gap-3 items-end">
+
+            <div class="md:col-span-5">
+              <label class="text-sm dark:text-slate-200">Product</label>
+              {{ formset.empty_form.product|add_class:"product-select w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+            </div>
+
+            <div class="md:col-span-4">
+              <label class="text-sm dark:text-slate-200">Weight Size</label>
+              {{ formset.empty_form.weight_price|add_class:"weight-select w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+              <p class="text-xs text-slate-500 mt-1">Select weight size</p>
+            </div>
+
+            <div class="md:col-span-2">
+              <label class="text-sm dark:text-slate-200">Qty</label>
+              {{ formset.empty_form.quantity|add_class:"qty-input w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" }}
+            </div>
+
+            <div class="md:col-span-1 flex justify-end">
+              <button type="button" class="remove-row px-3 py-2 bg-red-600 text-white rounded-lg">✖</button>
+            </div>
+
+            <input type="hidden" class="row-unit-price" value="0">
+            <input type="hidden" class="row-weight-kg" value="0">
+          </div>
+        </div>
+      </template>
+
+      <button type="button" id="addItemBtn" class="mt-3 px-4 py-2 bg-green-600 text-white rounded-lg">
+        + Add Item
+      </button>
+    </div>
+
+    <!-- Summary -->
+    <div class="mt-6 flex justify-end">
+      <div class="w-full md:w-96 border rounded-2xl p-4 bg-white dark:bg-slate-900 dark:border-slate-700">
+        <div class="text-sm font-semibold mb-3 dark:text-white">Summary</div>
+
+        <div class="flex justify-between py-1">
+          <span>Subtotal</span>
+          <span>₵ <span id="subtotalAmount">0.00</span></span>
+        </div>
+
+        <div class="flex justify-between py-1">
+          <span>Discount</span>
+          <span>₵ <span id="discountAmount">0.00</span></span>
+        </div>
+
+        <div class="flex justify-between py-1">
+          <span>VAT (15%)</span>
+          <span>₵ <span id="vatAmount">0.00</span></span>
+        </div>
+
+        <div class="border-t mt-3 pt-3 flex justify-between font-bold text-lg dark:text-white">
+          <span>Grand Total</span>
+          <span>₵ <span id="grandTotal">0.00</span></span>
+        </div>
+      </div>
+    </div>
+
+    <button class="w-full mt-6 py-3 bg-blue-600 text-white rounded-xl font-bold">
+      Save & Print Receipt
+    </button>
+  </form>
+</div>
+
+<script>
+  // comes from views.py context:
+  // "weights_map_json": json.dumps({ product_id: [ {id, weight_kg, retail_price, wholesale_price} ] })
+  const WEIGHTS = {{ weights_map_json|safe }};
+  const SALE_TYPE = "{{ sale_type }}";
+
+  function initSelect2(scope){
+    $(scope).find("select.product-select").select2({
+      width: "100%",
+      placeholder: "Search product...",
+      allowClear: true
+    });
+
+    $(scope).find("select.weight-select").select2({
+      width: "100%",
+      placeholder: "Select weight size...",
+      allowClear: true
+    });
+  }
+
+  function populateWeights(row){
+    const productId = $(row).find("select.product-select").val();
+    const weightSel = $(row).find("select.weight-select");
+
+    // clear
+    weightSel.empty().append(new Option("---------", "", true, true));
+
+    if (!productId) {
+      weightSel.prop("disabled", true).trigger("change.select2");
+      $(row).find(".row-unit-price").val("0");
+      $(row).find(".row-weight-kg").val("0");
+      return;
+    }
+
+    const list = WEIGHTS[String(productId)] || [];
+    if (list.length === 0){
+      weightSel.prop("disabled", true).trigger("change.select2");
+      $(row).find(".row-unit-price").val("0");
+      $(row).find(".row-weight-kg").val("0");
+      return;
+    }
+
+    weightSel.prop("disabled", false);
+
+    list.forEach(w => {
+      const price = (SALE_TYPE === "wholesale") ? parseFloat(w.wholesale_price) : parseFloat(w.retail_price);
+      const opt = new Option(`${w.weight_kg} kg — ₵${price.toFixed(2)}`, w.id, false, false);
+      opt.dataset.price = price.toFixed(2);
+      opt.dataset.weight = w.weight_kg;
+      weightSel.append(opt);
+    });
+
+    weightSel.trigger("change.select2");
+  }
+
+  function updateRowMeta(row){
+    const selected = $(row).find("select.weight-select option:selected");
+    const price = selected.data("price");
+    const weight = selected.data("weight");
+
+    $(row).find(".row-unit-price").val(price || "0");
+    $(row).find(".row-weight-kg").val(weight || "0");
+  }
+
+  function calcTotals(){
+    let subtotal = 0;
+
+    $(".item-row").each(function(){
+      const qty = Number($(this).find("input.qty-input").val() || 0);
+      const unitPrice = Number($(this).find(".row-unit-price").val() || 0);
+      subtotal += (qty * unitPrice);
+    });
+
+    const discount = Number($("input[name='discount']").val() || 0);
+    let afterDiscount = subtotal - discount;
+    if (afterDiscount < 0) afterDiscount = 0;
+
+    const applyVat = $("input[name='apply_vat']").is(":checked");
+    const vat = applyVat ? (afterDiscount * 0.15) : 0;
+    const grand = afterDiscount + vat;
+
+    $("#subtotalAmount").text(subtotal.toFixed(2));
+    $("#discountAmount").text(discount.toFixed(2));
+    $("#vatAmount").text(vat.toFixed(2));
+    $("#grandTotal").text(grand.toFixed(2));
+  }
+
+  function updateFormIndex(el, prefix, index){
+    // replace __prefix__ with index in name/id
+    const find = new RegExp(prefix + "-__prefix__-", "g");
+    const repl = prefix + "-" + index + "-";
+    el.querySelectorAll("input, select, textarea, label").forEach(node => {
+      if (node.name) node.name = node.name.replace(find, repl);
+      if (node.id) node.id = node.id.replace(find, repl);
+      if (node.htmlFor) node.htmlFor = node.htmlFor.replace(find, repl);
+    });
+  }
+
+  $(document).ready(function(){
+    initSelect2(document);
+
+    // bind events
+    $("#itemsWrap").on("change", "select.product-select", function(){
+      const row = $(this).closest(".item-row");
+      populateWeights(row);
+      calcTotals();
+    });
+
+    $("#itemsWrap").on("change", "select.weight-select", function(){
+      const row = $(this).closest(".item-row");
+      updateRowMeta(row);
+      calcTotals();
+    });
+
+    $("#itemsWrap").on("input", "input.qty-input, input[name='discount']", calcTotals);
+    $("input[name='apply_vat']").on("change", calcTotals);
+
+    $("#itemsWrap").on("click", ".remove-row", function(){
+      const rows = $(".item-row");
+      if (rows.length <= 1) return;
+
+      $(this).closest(".item-row").remove();
+
+      // reindex forms after remove
+      const prefix = "{{ formset.prefix }}";
+      const allRows = document.querySelectorAll("#itemsWrap .item-row");
+      allRows.forEach((r, i) => updateFormIndex(r, prefix, i));
+      $("#id_" + prefix + "-TOTAL_FORMS").val(allRows.length);
+
+      calcTotals();
+    });
+
+    $("#addItemBtn").on("click", function(){
+      const prefix = "{{ formset.prefix }}";
+      const totalEl = document.getElementById("id_" + prefix + "-TOTAL_FORMS");
+      const index = parseInt(totalEl.value, 10);
+
+      const tpl = document.getElementById("emptyFormTemplate").content.cloneNode(true);
+      const wrapper = document.createElement("div");
+      wrapper.appendChild(tpl);
+
+      const newRow = wrapper.querySelector(".item-row");
+      updateFormIndex(newRow, prefix, index);
+
+      document.getElementById("itemsWrap").appendChild(newRow);
+      totalEl.value = index + 1;
+
+      initSelect2(newRow);
+      populateWeights(newRow);
+      calcTotals();
+    });
+
+    // init rows
+    $(".item-row").each(function(){
+      populateWeights(this);
+      updateRowMeta(this);
+    });
+
+    calcTotals();
+  });
+</script>
+
+{% endblock %}

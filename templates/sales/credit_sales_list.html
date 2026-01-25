@@ -1,4 +1,155 @@
 {% extends "base.html" %}
+{% block content %}
+<div class="max-w-5xl mx-auto p-6 space-y-4">
+  <div class="flex items-center justify-between">
+    <h2 class="text-xl font-semibold">Credit Sales</h2>
+    <div class="text-sm text-slate-600">Total Outstanding: ₵{{ total_outstanding|floatformat:2 }}</div>
+  </div>
+
+  <div class="bg-white rounded-xl border overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-slate-50">
+        <tr>
+          <th class="p-3 text-left">Receipt</th>
+          <th class="p-3 text-left">Customer</th>
+          <th class="p-3 text-right">Total</th>
+          <th class="p-3 text-right">Paid</th>
+          <th class="p-3 text-right">Balance</th>
+          <th class="p-3 text-right">Action</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        {% for s in sales %}
+        <tr>
+          <td class="p-3">CS-{{ s.id|stringformat:"04d" }}</td>
+          <td class="p-3">{{ s.customer_name|default:"Walk-in" }}</td>
+          <td class="p-3 text-right">₵{{ s.total_amount|floatformat:2 }}</td>
+          <td class="p-3 text-right">₵{{ s.amount_paid|floatformat:2 }}</td>
+          <td class="p-3 text-right text-red-600">₵{{ s.balance_due_db|floatformat:2 }}</td>
+          <td class="p-3 text-right">
+            <a class="px-3 py-1 rounded bg-blue-600 text-white"
+               href="{% url 'credit_payment_add' s.id %}">Receive Payment</a>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="6" class="p-6 text-center text-slate-500">No outstanding credit sales.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+
+{% comment %} {% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-6xl mx-auto mt-8 px-4 space-y-4">
+
+  <div class="flex items-start justify-between gap-3">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">💳 Credit Sales</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Outstanding credit sales that still have balance due.
+      </p>
+    </div>
+
+    <div class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800 p-4">
+      <div class="text-xs uppercase text-slate-500 dark:text-slate-400">Total Outstanding</div>
+      <div class="text-2xl font-bold text-red-600">₵ {{ total_outstanding|floatformat:2 }}</div>
+    </div>
+  </div>
+
+  <div class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800">
+          <tr class="text-left text-slate-600 dark:text-slate-200">
+            <th class="p-3">Sale</th>
+            <th class="p-3">Customer</th>
+            <th class="p-3">Type</th>
+            <th class="p-3">Total (₵)</th>
+            <th class="p-3">Paid (₵)</th>
+            <th class="p-3">Balance (₵)</th>
+            <th class="p-3">Due Date</th>
+            <th class="p-3 text-right">Action</th>
+          </tr>
+        </thead>
+
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+          {% for s in sales %}
+          <tr class="text-slate-700 dark:text-slate-200">
+            <td class="p-3 font-semibold">
+              CS-{{ s.id|stringformat:"04d" }}
+              <div class="text-xs text-slate-500 dark:text-slate-400">{{ s.timestamp|date:"Y-m-d H:i" }}</div>
+            </td>
+
+            <td class="p-3">
+              <div class="font-medium">{{ s.customer_name|default:"Walk-in Customer" }}</div>
+              <div class="text-xs text-slate-500 dark:text-slate-400">{{ s.customer_phone|default:"—" }}</div>
+            </td>
+
+            <td class="p-3">
+              <span class="px-2 py-1 rounded-full text-xs
+                {% if s.sale_type == 'wholesale' %}
+                  bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-200
+                {% else %}
+                  bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-200
+                {% endif %}
+              ">
+                {{ s.get_sale_type_display }}
+              </span>
+            </td>
+
+            <td class="p-3 font-medium">₵ {{ s.total_amount|floatformat:2 }}</td>
+            <td class="p-3 text-green-700 dark:text-green-300 font-medium">₵ {{ s.amount_paid|floatformat:2 }}</td>
+
+            {# You annotated balance_due_db in the view #}
+            <td class="p-3 text-red-600 font-bold">
+              ₵ {{ s.balance_due_db|floatformat:2 }}
+            </td>
+
+            <td class="p-3">
+              {% if s.due_date %}
+                {{ s.due_date }}
+              {% else %}
+                <span class="text-xs text-slate-500 dark:text-slate-400">—</span>
+              {% endif %}
+            </td>
+
+            <td class="p-3 text-right">
+              <a href="{% url 'credit_payment_add' s.id %}"
+                 class="inline-flex items-center gap-2 px-3 py-2 rounded-xl bg-green-600 text-white hover:bg-green-700">
+                ➕ Receive Payment
+              </a>
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="8" class="p-6 text-center text-slate-500 dark:text-slate-400">
+              ✅ No outstanding credit sales.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="flex justify-end">
+    <a href="{% url 'create_sale' %}"
+       class="px-4 py-2 rounded-xl bg-blue-600 text-white hover:bg-blue-700">
+      + New Sale
+    </a>
+  </div>
+
+</div>
+
+{% endblock %} {% endcomment %}
+
+
+
+{% comment %} {% extends "base.html" %}
 {% block title %}Credit Sales — ColdStore{% endblock %}
 {% block content %}
 
@@ -60,4 +211,4 @@
   </div>
 
 </div>
-{% endblock %}
+{% endblock %} {% endcomment %}

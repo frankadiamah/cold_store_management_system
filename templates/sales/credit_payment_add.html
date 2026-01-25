@@ -1,4 +1,167 @@
 {% extends "base.html" %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto mt-8 px-4 space-y-4">
+
+  <div class="flex items-start justify-between">
+    <div>
+      <h2 class="text-2xl font-bold text-slate-800 dark:text-slate-100">➕ Receive Credit Payment</h2>
+      <p class="text-sm text-slate-500 dark:text-slate-400">
+        Record a payment for this credit sale.
+      </p>
+    </div>
+
+    <a href="{% url 'credit_sales_list' %}"
+       class="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-white">
+      ← Back
+    </a>
+  </div>
+
+  <!-- Sale Summary Card -->
+  <div class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800 p-5 space-y-2">
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-slate-500 dark:text-slate-400">Sale</div>
+      <div class="font-bold text-slate-800 dark:text-slate-100">CS-{{ sale.id|stringformat:"04d" }}</div>
+    </div>
+
+    <div class="flex items-center justify-between">
+      <div class="text-sm text-slate-500 dark:text-slate-400">Customer</div>
+      <div class="font-medium text-slate-800 dark:text-slate-100">{{ sale.customer_name|default:"Walk-in Customer" }}</div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-3 mt-3">
+      <div class="rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400">Total</div>
+        <div class="text-lg font-bold">₵ {{ sale.total_amount|floatformat:2 }}</div>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400">Paid</div>
+        <div class="text-lg font-bold text-green-700 dark:text-green-300">₵ {{ sale.amount_paid|floatformat:2 }}</div>
+      </div>
+
+      <div class="rounded-xl bg-slate-50 dark:bg-slate-800 p-3">
+        <div class="text-xs text-slate-500 dark:text-slate-400">Balance</div>
+        <div class="text-lg font-bold text-red-600">₵ {{ sale.balance_due_calc|floatformat:2 }}</div>
+      </div>
+    </div>
+
+    {% if sale.due_date %}
+      <div class="text-sm text-slate-600 dark:text-slate-300 mt-2">
+        Due Date: <span class="font-semibold">{{ sale.due_date }}</span>
+      </div>
+    {% endif %}
+  </div>
+
+  <!-- Payment Form -->
+  <div class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800 p-6">
+    <form method="post" class="space-y-4">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="p-3 rounded-xl bg-red-50 text-red-700 border border-red-200">
+          {{ form.non_field_errors }}
+        </div>
+      {% endif %}
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Amount (₵)</label>
+          {{ form.amount }}
+          {% if form.amount.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ form.amount.errors|striptags }}</p>
+          {% endif %}
+        </div>
+
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Payment Method</label>
+          {{ form.payment_method }}
+          {% if form.payment_method.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ form.payment_method.errors|striptags }}</p>
+          {% endif %}
+        </div>
+
+        <div class="md:col-span-2">
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-200">Reference (optional)</label>
+          {{ form.reference }}
+          {% if form.reference.errors %}
+            <p class="text-xs text-red-600 mt-1">{{ form.reference.errors|striptags }}</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <button type="submit"
+        class="w-full py-3 rounded-xl bg-green-600 text-white font-semibold hover:bg-green-700">
+        Save Payment
+      </button>
+    </form>
+  </div>
+
+  <!-- Payment history -->
+  <div class="bg-white dark:bg-slate-900 rounded-2xl shadow border border-slate-200 dark:border-slate-800 overflow-hidden">
+    <div class="p-4 border-b border-slate-200 dark:border-slate-800">
+      <h3 class="font-semibold text-slate-800 dark:text-slate-100">Payment History</h3>
+    </div>
+
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm">
+        <thead class="bg-slate-50 dark:bg-slate-800">
+          <tr class="text-left text-slate-600 dark:text-slate-200">
+            <th class="p-3">Date</th>
+            <th class="p-3">Amount</th>
+            <th class="p-3">Method</th>
+            <th class="p-3">Reference</th>
+            <th class="p-3">Received By</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-200 dark:divide-slate-800">
+          {% for p in sale.credit_payments.all %}
+          <tr class="text-slate-700 dark:text-slate-200">
+            <td class="p-3">{{ p.paid_on|date:"Y-m-d H:i" }}</td>
+            <td class="p-3 font-semibold text-green-700 dark:text-green-300">₵ {{ p.amount|floatformat:2 }}</td>
+            <td class="p-3">{{ p.get_payment_method_display }}</td>
+            <td class="p-3">{{ p.reference|default:"—" }}</td>
+            <td class="p-3">
+              {% if p.received_by %}
+                {{ p.received_by.get_full_name|default:p.received_by.username }}
+              {% else %}
+                —
+              {% endif %}
+            </td>
+          </tr>
+          {% empty %}
+          <tr>
+            <td colspan="5" class="p-6 text-center text-slate-500 dark:text-slate-400">
+              No payments yet.
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+
+<!-- Simple Tailwind-style input polish -->
+<style>
+  input, select, textarea {
+    width: 100%;
+    padding: .6rem .75rem;
+    border-radius: .75rem;
+    border: 1px solid rgba(148,163,184,.6);
+  }
+  .dark input, .dark select, .dark textarea {
+    background: rgb(51 65 85);
+    border-color: rgb(71 85 105);
+    color: white;
+  }
+</style>
+
+{% endblock %}
+
+
+{% comment %} {% extends "base.html" %}
 {% load form_filters %}
 {% block title %}Receive Payment — Credit Sale{% endblock %}
 {% block content %}
@@ -54,4 +217,4 @@
 
 </div>
 
-{% endblock %}
+{% endblock %} {% endcomment %}

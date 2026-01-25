@@ -22,8 +22,8 @@ from datetime import datetime
 #     messages.error(request, "Failed to add expense. Please check your inputs.")
 
 
-# @login_required
-# @has_any_group("Admin","Staff")
+@login_required
+@has_any_group("Admin","Staff")
 def add_expense(request):
     if request.method == "POST":
         form = ExpenseForm(request.POST)

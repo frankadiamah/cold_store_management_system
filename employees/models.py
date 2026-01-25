@@ -12,7 +12,8 @@ class EmployeeProfile(models.Model):
     salary = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     ssnit_number = models.CharField(max_length=50, blank=True)
     photo = models.ImageField(upload_to="employees/", blank=True, null=True)
-    
+    created_by = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+
 
     def __str__(self):
         return self.full_name

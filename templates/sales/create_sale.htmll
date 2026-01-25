@@ -1,0 +1,719 @@
+{% extends "base.html" %}
+{% load form_filters %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto dark:text-slate-100 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md mt-10">
+
+  <h2 class="text-2xl font-bold mb-6 text-slate-800 dark:text-gray-100 flex items-center">
+    🧾 Create Sale
+  </h2>
+
+  <form method="post" id="saleForm" novalidate>
+    {% csrf_token %}
+    {{ formset.management_form }}
+
+
+    <!-- CUSTOMER INFO -->
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div>
+    <label class="text-sm">Customer Name</label>
+    {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+  <div>
+    <label class="text-sm">Customer Phone</label>
+    {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+</div>
+
+<div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div>
+    <label class="text-sm">Payment Method</label>
+    {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+{% comment %} added to track credit option {% endcomment %}
+
+  {% comment %} <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6"> {% endcomment %}
+  <div>
+    <label class="text-sm">Amount Paid Now (₵) - optional</label>
+    {{ sale_form.amount_paid|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+  <div>
+    <label class="text-sm">Due Date (optional)</label>
+    {{ sale_form.due_date|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+  {% comment %} </div> {% endcomment %}
+{% comment %} added to track credit option {% endcomment %}
+  <div>
+    <label class="text-sm">Discount (₵)</label>
+    {{ sale_form.discount|add_class:"discount-input w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+</div>
+
+<!-- ✅ CREDIT FIELDS (hidden unless credit selected) -->
+<div id="creditFields" class="hidden grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+  <div>
+    <label class="text-sm">Amount Paid Now (₵)</label>
+    {{ sale_form.amount_paid|add_class:"amount-paid-input w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+  <div>
+    <label class="text-sm">Due Date</label>
+    {{ sale_form.due_date|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+  </div>
+</div>
+
+    <!-- CUSTOMER INFO  replaced with the one above it-->
+    
+    {% comment %} <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm">Customer Name</label>
+        {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm">Customer Phone</label>
+        {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm">Payment Method</label>
+        {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm">Discount (₵)</label>
+        {{ sale_form.discount|add_class:"discount-input w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>  we are texting something special here to see if the form will be responsiveon mobile{% endcomment %}
+
+    <!-- ITEMS -->
+    <h3 class="text-lg font-semibold mt-4 mb-2 text-slate-700">🧺 Items</h3>
+
+    <div id="items" class="space-y-4">
+      {% for form in formset.forms %}
+      {% comment %} replaced with the one beneath it {% endcomment %}
+      {% comment %} <div class="item-row grid grid-cols-12 gap-3 p-4 bg-slate-50 dark:bg-gray-700 border rounded-lg"> {% endcomment %}
+      <div class="item-row grid grid-cols-1 md:grid-cols-12 gap-3 p-4 bg-slate-50 dark:bg-gray-700 border rounded-lg">
+
+        <div class="col-span-4">
+          <label class="text-sm">Product</label>
+          {# ensure the product select has class product-select and keeps its name/id from Django formset #}
+          {{ form.product|add_class:"product-select w-full rounded-lg p-2 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Qty</label>
+          {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 border dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Unit Price (₵)</label>
+          {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 border border-slate-700 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-3">
+          <label class="text-sm">Item Total (₵)</label>
+          <input type="text" class="item-total w-full rounded-lg p-2 bg-gray-200 dark:bg-gray-700 text-right" readonly>
+        </div>
+
+        <div class="col-span-1 flex items-end justify-end">
+          <button type="button" class="remove-item bg-red-600 text-white px-2 py-1 rounded">✕</button>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ADD ITEM -->
+    <div class="mt-5">
+      <button type="button" id="addItem" class="px-4 py-2 bg-green-600 text-white rounded-lg">+ Add Item</button>
+    </div>
+
+    <!-- TOTAL SUMMARY (Option B large/styled) -->
+    <div class="mt-6 p-4 bg-white dark:bg-slate-800 border rounded-lg shadow-sm max-w-md ml-auto">
+      <div class="text-sm text-slate-700 mb-2">Summary</div>
+
+      <div class="flex justify-between items-center">
+        <div class="text-slate-700">Subtotal</div>
+        <div class="font-medium">₵ <span id="subTotal">0.00</span></div>
+      </div>
+
+      <div class="flex justify-between items-center mt-2">
+        <div class="text-slate-700">Discount</div>
+        <div class="font-medium">₵ <span id="discountDisplay">0.00</span></div>
+      </div>
+      {% comment %} optiona for vat Calculate {% endcomment %}
+      <div class="flex items-center gap-2">
+      {{ sale_form.apply_vat }}
+      <label class="text-sm text-slate-700 dark:text-slate-300">Apply VAT (15%)</label>
+      </div>
+
+      <div class="flex justify-between items-center mt-2">
+        <div class="text-slate-700">VAT (15%)</div>
+        <div class="font-medium">₵ <span id="vatAmount">0.00</span></div>
+      </div>  
+
+      <div class="border-t mt-3 pt-3 text-right">
+        <div class="text-lg text-slate-700">Grand Total</div>
+        <div class="text-2xl font-bold text-slate-900 dark:text-white">₵ <span id="grandTotal">0.00</span></div>
+      </div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button type="submit" id="savePrintBtn" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg font-bold">
+      Save & Print Receipt
+    </button>
+  </form>
+
+</div>
+
+<!-- ===== FULL JS: auto price, accounting, reindexing, submit-clean ===== -->
+<script>
+/* Data injected from view: prices_json */
+const productPrices = {{ prices_json|safe }};
+const VAT_RATE = 0.15; // 15%
+
+/* Format number to accounting: 1,234.56 */
+function fmt(n) {
+    return Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+/* Clean formatted number string to float */
+function cleanNumber(str) {
+    if (!str && str !== 0) return 0;
+    return parseFloat(String(str).replace(/,/g, "")) || 0;
+}
+
+/* Update one row: set unit price and item total (formatted) */
+function updateRow(row) {
+    const prodSelect = row.querySelector(".product-select");
+    const qtyInput = row.querySelector(".qty-input");
+    const priceInput = row.querySelector(".price-input");
+    const itemTotalInput = row.querySelector(".item-total");
+
+    const pid = prodSelect ? prodSelect.value : "";
+    const qty = cleanNumber(qtyInput ? qtyInput.value : 0);
+
+    const unitPrice = productPrices[pid] || 0;
+
+    // Show formatted unit price
+    if (priceInput) priceInput.value = fmt(unitPrice);
+
+    // Calculate and show item total
+    const itemTotal = qty * unitPrice;
+    if (itemTotalInput) itemTotalInput.value = fmt(itemTotal);
+}
+document.addEventListener("change", (e) => {
+  if (e.target && e.target.name === "apply_vat") {
+    recalcTotals();
+  }
+});
+
+/* Recalculate totals for entire formset */
+
+// Check if VAT checkbox is checked
+function isVatEnabled() {
+  const cb = document.querySelector("input[name='apply_vat']");
+  return cb ? cb.checked : true;
+}
+
+function recalcTotals() {
+  let subtotal = 0;
+  document.querySelectorAll(".item-row").forEach(row => {
+    const raw = row.querySelector(".item-total").value || "0.00";
+    subtotal += cleanNumber(raw);
+  });
+
+  const discountInput = document.querySelector(".discount-input");
+  const discountVal = discountInput ? cleanNumber(discountInput.value) : 0;
+
+  const subtotalAfterDiscount = Math.max(0, subtotal - discountVal);
+
+  const vat = isVatEnabled() ? (subtotalAfterDiscount * VAT_RATE) : 0;
+  const grand = subtotalAfterDiscount + vat;
+
+  document.getElementById("subTotal").innerText = fmt(subtotal);
+  document.getElementById("discountDisplay").innerText = fmt(discountVal);
+  document.getElementById("vatAmount").innerText = fmt(vat);
+  document.getElementById("grandTotal").innerText = fmt(grand);
+}
+
+
+
+/* Update every row + totals */
+function recalcAll() {
+    document.querySelectorAll(".item-row").forEach(updateRow);
+    recalcTotals();
+}
+
+/* Reindex formset inputs after add/remove so Django receives correct names and IDs */
+function reindexFormset() {
+    const rows = document.querySelectorAll(".item-row");
+    const totalForms = document.querySelector("[name$='TOTAL_FORMS']");
+    rows.forEach((row, idx) => {
+        // update inputs/selects
+        row.querySelectorAll("select, input").forEach(el => {
+            const name = el.getAttribute("name");
+            const id = el.getAttribute("id");
+
+            if (name) {
+                // replace form-<n>- with form-<idx>-
+                const newName = name.replace(/form-(\d+|__prefix__)-/, `form-${idx}-`);
+                el.setAttribute("name", newName);
+            }
+            if (id) {
+                const newId = id.replace(/id_form-(\d+|__prefix__)-/, `id_form-${idx}-`);
+                el.setAttribute("id", newId);
+            }
+        });
+    });
+
+    // update total forms
+    if (totalForms) totalForms.value = rows.length;
+}
+
+/* Clone first row and append a new blank row (keeps choices) */
+document.getElementById("addItem").addEventListener("click", () => {
+    const items = document.getElementById("items");
+    const first = items.querySelector(".item-row");
+    const clone = first.cloneNode(true);
+
+    // Clear values for cloned inputs/selects but keep options
+    clone.querySelectorAll("select, input").forEach(el => {
+        // Preserve management or hidden inputs? (none inside row)
+        const type = el.getAttribute("type");
+        if (type === "hidden") return;
+        el.value = ""; // clear the visible value
+    });
+
+    // Append and reindex
+    items.appendChild(clone);
+    reindexFormset();
+    recalcAll();
+
+    // Focus product select of new row
+    const newRow = items.querySelectorAll(".item-row")[items.querySelectorAll(".item-row").length - 1];
+    const ps = newRow.querySelector(".product-select");
+    if (ps) ps.focus();
+});
+
+/* Remove item row (but keep at least one) */
+document.getElementById("items").addEventListener("click", (e) => {
+    if (e.target.classList.contains("remove-item")) {
+        const rows = document.querySelectorAll(".item-row");
+        if (rows.length <= 1) {
+            // optional: clear first row instead of removing
+            const first = rows[0];
+            first.querySelectorAll("select, input").forEach(el => el.value = "");
+            recalcAll();
+            return;
+        }
+        e.target.closest(".item-row").remove();
+        reindexFormset();
+        recalcAll();
+    }
+});
+
+/* When product changes or qty changes, update that row and totals */
+document.getElementById("items").addEventListener("input", (e) => {
+    const target = e.target;
+    const row = target.closest(".item-row");
+    if (!row) return;
+
+    if (target.classList.contains("product-select") || target.classList.contains("qty-input")) {
+        updateRow(row);
+        recalcTotals();
+    }
+
+    // If discount changed, update totals
+    if (target.classList.contains("discount-input")) {
+        recalcTotals();
+    }
+});
+
+/* Before submit:
+   - Remove commas from unit price fields so Django DecimalField accepts values (e.g. "1,200.00" -> "1200.00")
+   - Ensure formset management values (TOTAL_FORMS) correct (reindexFormset)
+*/
+document.getElementById("saleForm").addEventListener("submit", (e) => {
+    reindexFormset(); // ensure names are correct
+    // Clean price values
+    document.querySelectorAll(".price-input").forEach(pi => {
+        pi.value = String(cleanNumber(pi.value).toFixed(2));
+    });
+
+    // Also ensure discount sent without commas
+    const disc = document.querySelector(".discount-input");
+    if (disc) disc.value = String(cleanNumber(disc.value).toFixed(2));
+
+    // Optionally show a disabled state to prevent double submit
+    const btn = document.getElementById("savePrintBtn");
+    btn.disabled = true;
+    btn.innerText = "Processing...";
+});
+
+/* initialize on load */
+document.addEventListener("DOMContentLoaded", () => {
+    // run reindex (in case initial management form uses __prefix__ or indices)
+    reindexFormset();
+    recalcAll();
+});
+</script>
+
+{% endblock %}
+
+{% comment %} {% extends "base.html" %}  
+{% load form_filters %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto dark:text-slate-100 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md mt-10">
+
+  <h2 class="text-2xl font-bold mb-6 text-slate-800 dark:text-gray-100 flex items-center">
+    🧾 Create Sale
+  </h2>
+
+  <form method="post" id="saleForm">
+    {% csrf_token %}
+
+    <!-- CUSTOMER INFO -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm">Customer Name</label>
+        {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm">Customer Phone</label>
+        {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm">Payment Method</label>
+        {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm">Discount (₵)</label>
+        {{ sale_form.discount|add_class:"discount-input w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>
+
+    <!-- ITEMS -->
+    <h3 class="text-lg font-semibold mt-4 mb-2 text-slate-200">🧺 Items</h3>
+
+    <div id="items" class="space-y-4">
+      {% for form in formset.forms %}
+      <div class="item-row grid grid-cols-12 gap-3 p-4 bg-slate-50 dark:bg-gray-700 border rounded-lg">
+
+        <div class="col-span-4">
+          <label class="text-sm">Product</label>
+          {{ form.product|add_class:"product-select w-full rounded-lg p-2 border border-slate-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Qty</label>
+          {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 border dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Unit Price (₵)</label>
+          {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 border border-slate-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+
+          {% comment %} {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 border dark:bg-gray-700 dark:text-white" }}  
+        </div>
+
+        <div class="col-span-3">
+          <label class="text-sm">Item Total (₵)</label>
+          <input type="text" class="item-total w-full rounded-lg p-2 bg-gray-200 dark:bg-gray-600 text-right" readonly>
+        </div>
+
+        <div class="col-span-1 flex items-end justify-end">
+          <button type="button" class="remove-item bg-red-600 text-white px-2 py-1 rounded">✕</button>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ADD ITEM -->
+    <button type="button" id="addItem" class="mt-5 px-4 py-2 bg-green-600 text-white rounded-lg">
+      + Add Item
+    </button>
+
+    <!-- TOTAL SUMMARY -->
+    <div class="mt-6 space-y-2 text-right text-lg font-semibold text-slate-800 dark:text-gray-100">
+
+      <div>Subtotal: ₵ <span id="subTotal">0.00</span></div>
+      <div>VAT (15%): ₵ <span id="vatAmount">0.00</span></div>
+      <div class="border-t pt-2 text-xl">Grand Total: ₵ <span id="grandTotal">0.00</span></div>
+    </div>
+
+    <!-- SUBMIT -->
+    <button type="submit" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg font-bold">
+      Save & Print Receipt
+    </button>
+
+  </form>
+
+</div>
+
+<!-- ===== JS AUTO-CALC ENGINE ===== -->
+<script>
+const productPrices = {{ prices_json|safe }};
+const VAT_RATE = 0.15; // 15%
+
+// FORMAT CURRENCY 1,200.00
+function fmt(n) {
+    return Number(n).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+function updateRow(row) {
+    const pid = row.querySelector(".product-select").value;
+    const qty = parseFloat(row.querySelector(".qty-input").value) || 0;
+
+    const priceField = row.querySelector(".price-input");
+    const itemTotalField = row.querySelector(".item-total");
+
+    const unitPrice = productPrices[pid] || 0;
+    priceField.value = fmt(unitPrice);
+
+    const itemTotal = qty * unitPrice;
+    itemTotalField.value = fmt(itemTotal);
+}
+
+function recalcTotals() {
+    let subtotal = 0;
+
+    document.querySelectorAll(".item-row").forEach(row => {
+        const raw = row.querySelector(".item-total").value.replace(/,/g,"");
+        subtotal += parseFloat(raw) || 0;
+    });
+
+    const discount = parseFloat(document.querySelector(".discount-input")?.value || 0);
+
+    subtotal -= discount;
+    if (subtotal < 0) subtotal = 0;
+
+    const vat = subtotal * VAT_RATE;
+    const grand = subtotal + vat;
+
+    document.getElementById("subTotal").innerText = fmt(subtotal);
+    document.getElementById("vatAmount").innerText = fmt(vat);
+    document.getElementById("grandTotal").innerText = fmt(grand);
+}
+
+function recalcAll() {
+    document.querySelectorAll(".item-row").forEach(updateRow);
+    recalcTotals();
+}
+
+document.getElementById("addItem").addEventListener("click", () => {
+    const first = document.querySelector(".item-row");
+    const clone = first.cloneNode(true);
+
+    clone.querySelectorAll("select, input").forEach(x => x.value = "");
+    clone.querySelector(".item-total").value = "0.00";
+
+    document.getElementById("items").appendChild(clone);
+    recalcAll();
+});
+
+document.getElementById("items").addEventListener("click", e => {
+    if (e.target.classList.contains("remove-item")) {
+        const rows = document.querySelectorAll(".item-row");
+        if (rows.length > 1) e.target.closest(".item-row").remove();
+        recalcAll();
+    }
+});
+
+document.getElementById("items").addEventListener("input", e => {
+    if (e.target.classList.contains("product-select") ||
+        e.target.classList.contains("qty-input")) {
+        const row = e.target.closest(".item-row");
+        updateRow(row);
+        recalcTotals();
+    }
+});
+
+// Discount changes total
+document.querySelector(".discount-input").addEventListener("input", recalcTotals);
+
+recalcAll();
+</script>
+
+{% endblock %}
+
+{% comment %} {% extends "base.html" %}
+{% load form_filters %}
+{% block content %}
+
+<div class="max-w-3xl mx-auto dark:text-slate-100 bg-white dark:bg-gray-800 p-6 rounded-2xl shadow-md mt-10">
+
+  <h2 class="text-2xl font-bold mb-6 text-slate-800 dark:text-gray-100 flex items-center">
+    🧾 Create Sale
+  </h2>
+
+  <form method="post" id="saleForm">
+    {% csrf_token %}
+
+    <!-- CUSTOMER INFO -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm text-slate-600 dark:text-slate-300">Customer Name</label>
+        {{ sale_form.customer_name|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm text-slate-600 dark:text-slate-300">Customer Phone</label>
+        {{ sale_form.customer_phone|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 gap-4 mb-6">
+      <div>
+        <label class="text-sm text-slate-600 dark:text-slate-300">Payment Method</label>
+        {{ sale_form.payment_method|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+      <div>
+        <label class="text-sm text-slate-600 dark:text-slate-300">Discount (₵)</label>
+        {{ sale_form.discount|add_class:"w-full rounded-lg p-2 border dark:bg-gray-700" }}
+      </div>
+    </div>
+
+    <!-- ITEMS AREA -->
+    <h3 class="text-lg font-semibold mt-4 mb-2 text-slate-700">🧺 Items</h3>
+
+    <div id="items" class="space-y-4">
+      {% for form in formset.forms %}
+      <div class="item-row grid grid-cols-12 gap-3 p-4 bg-slate-50 dark:bg-gray-700 border rounded-lg">
+
+        <div class="col-span-4">
+          <label class="text-sm">Product</label>
+          {{ form.product|add_class:"product-select w-full rounded-lg p-2 border border-slate-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Qty</label>
+          {{ form.quantity|add_class:"qty-input w-full rounded-lg p-2 border border-slate-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-2">
+          <label class="text-sm">Unit Price (₵)</label>
+          {{ form.unit_price|add_class:"price-input w-full rounded-lg p-2 border border-slate-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white" }}
+        </div>
+
+        <div class="col-span-3">
+          <label class="text-sm">Item Total (₵)</label>
+          <input type="text" class="item-total w-full rounded-lg p-2 bg-gray-200 dark:bg-gray-600 text-right" readonly>
+        </div>
+
+        <div class="col-span-1 flex items-end justify-end">
+          <button type="button" class="remove-item bg-red-600 text-white px-2 py-1 rounded">✕</button>
+        </div>
+
+      </div>
+      {% endfor %}
+    </div>
+
+    <!-- ADD MORE ITEMS -->
+    <button type="button" id="addItem" class="mt-5 px-4 py-2 bg-green-600 text-white rounded-lg">
+      + Add Item
+    </button>
+
+    <!-- TOTAL -->
+    <div class="mt-6 text-right text-lg font-semibold text-slate-800 dark:text-gray-100">
+      Total: ₵ <span id="grandTotal">0.00</span> 
+    </div>
+
+    <!-- SUBMIT -->
+    <button type="submit" class="w-full mt-6 py-3 bg-blue-600 text-white rounded-lg font-bold">
+      Save & Print Receipt
+    </button>
+  </form>
+
+</div>
+
+<!-- ======== AUTO PRICE + ACCOUNTING FORMAT JS ========= -->
+<script>
+const productPrices = {{ prices_json|safe }};
+
+// Format numbers as accounting style: 1,234.56
+function formatMoney(value) {
+    return value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Convert formatted money back to float (remove commas)
+function cleanNumber(str) {
+    return parseFloat(str.replace(/,/g, "")) || 0;
+}
+
+function updateRow(row) {
+    const pid = row.querySelector(".product-select").value;
+    const qty = cleanNumber(row.querySelector(".qty-input").value);
+
+    const priceField = row.querySelector(".price-input");
+    const itemTotalField = row.querySelector(".item-total");
+
+    // Fetch product price
+    const unitPrice = productPrices[pid] || 0;
+
+    // Show formatted price
+    priceField.value = formatMoney(unitPrice);
+
+    // Calculate item total
+    const itemTotal = qty * unitPrice;
+
+    // Display formatted
+    itemTotalField.value = formatMoney(itemTotal);
+}
+
+function updateGrandTotal() {
+    let grand = 0;
+    document.querySelectorAll(".item-row").forEach(row => {
+        grand += cleanNumber(row.querySelector(".item-total").value);
+    });
+
+    document.getElementById("grandTotal").innerText = formatMoney(grand);
+}
+
+function recalcAll() {
+    document.querySelectorAll(".item-row").forEach(updateRow);
+    updateGrandTotal();
+}
+
+document.getElementById("addItem").addEventListener("click", () => {
+    const first = document.querySelector(".item-row");
+    const clone = first.cloneNode(true);
+
+    // Reset values
+    clone.querySelectorAll("select, input").forEach(x => x.value = "");
+    clone.querySelector(".item-total").value = "0.00";
+
+    document.getElementById("items").appendChild(clone);
+
+    recalcAll();
+});
+
+document.getElementById("items").addEventListener("click", e => {
+    if (e.target.classList.contains("remove-item")) {
+        const rows = document.querySelectorAll(".item-row");
+        if (rows.length > 1) {
+            e.target.closest(".item-row").remove();
+        }
+        recalcAll();
+    }
+});
+
+// Trigger recalculation on product or qty change
+document.getElementById("items").addEventListener("input", e => {
+    if (e.target.classList.contains("product-select") ||
+        e.target.classList.contains("qty-input")) {
+
+        const row = e.target.closest(".item-row");
+        updateRow(row);
+        updateGrandTotal();
+    }
+});
+
+recalcAll();
+</script>
+
+{% endblock %} {% endcomment %}

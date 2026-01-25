@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="max-w-2xl mx-auto mt-10 bg-white dark:bg-slate-800 p-6 rounded-2xl shadow">
+  <h2 class="text-2xl font-bold mb-6 dark:text-white">📦 Receive Stock (Boxes)</h2>
+
+  <form method="post" class="space-y-4">
+    {% csrf_token %}
+
+    <div>
+      <label class="text-sm dark:text-slate-200">Product</label>
+      <select name="product" class="w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white">
+        {% for p in products %}
+          <option value="{{ p.id }}">{{ p.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div>
+        <label class="text-sm dark:text-slate-200">Boxes Received</label>
+        <input type="number" name="boxes" min="1"
+               class="w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" required>
+      </div>
+      <div>
+        <label class="text-sm dark:text-slate-200">Box Weight (kg)</label>
+        <input type="number" step="0.01" name="box_weight_kg" value="30"
+               class="w-full rounded-lg p-2 border dark:bg-slate-700 dark:text-white" required>
+      </div>
+    </div>
+
+    <button class="w-full py-3 bg-blue-600 text-white rounded-lg font-bold">
+      Save Receipt
+    </button>
+  </form>
+</div>
+{% endblock %}

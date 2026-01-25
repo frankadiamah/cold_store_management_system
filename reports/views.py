@@ -58,7 +58,7 @@ except Exception:
 
 
 @login_required
-@has_any_group("Admin","Accountant")
+@has_any_group( "SuperAdmin", "Admin","Accountant")
 def summary(request):
     start = request.GET.get("start")
     end = request.GET.get("end")
@@ -189,7 +189,7 @@ def export_sales_csv(request):
     return response
 
 @login_required
-@has_any_group("Admin","Accountant")
+@has_any_group("SuperAdmin","Admin","Accountant")       
 def export_sales_excel(request):
     if not OPENPYXL_AVAILABLE:
         return HttpResponse(
@@ -232,7 +232,7 @@ def export_sales_excel(request):
     return response
 
 @login_required
-@has_any_group("Admin","Accountant")
+@has_any_group("SuperAdmin","SubAdmin","Admin","Accountant")
 def export_sales_pdf(request):
     sales = Sale.objects.all().order_by('-timestamp')
 

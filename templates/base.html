@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 {% load group_tags %}
+{% load role_tags %}
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -155,6 +156,21 @@
           <!-- ✅ Vehicle assets app link -->
           <li><a href="{% url 'assets:vehicle_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">🚗 Company Cars</a></li>
         
+
+          {% comment %} 
+G) Sidebar / base.html: show the menu to SubAdmin (since they can access), BUT the data will still be scoped
+So you do not need to hide Analytics/Reports/Stock/Finance links.
+Even if SubAdmin clicks them, they only see their own records.
+          {% endcomment %}
+
+      {% is_super_admin request.user as superadmin %}
+
+      {% if superadmin %}
+        <a href="{% url 'analytics_dashboard' %}">Analytics</a>
+        <a href="{% url 'reports_summary' %}">Reports</a>
+        <a href="{% url 'finance:account_list' %}">Finance</a>
+      {% endif %}
+
 
         <li><a href="{% url 'finance:account_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Finance</a></li>
         <li><a href="{% url 'reports_summary' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Reports</a></li>

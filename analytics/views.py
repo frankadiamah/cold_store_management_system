@@ -7,17 +7,21 @@ from django.shortcuts import render
 from sales.models import Sale
 from expenses.models import Expense
 from inventory.models import Product
-
+from users.utils import has_any_group  
 
 @login_required
+@has_any_group("SuperAdmin", "SubAdmin", "Admin", "Accountant")
 def analytics_dashboard(request):
     today = datetime.today()
     dates = [(today - timedelta(days=i)).date() for i in range(6, -1, -1)]
 
     # ✅ Admin/Accountant see all; others see only their own
     sales_qs = Sale.objects.all()
-    expenses_qs = Expense.objects.all()
+    expenses_qs = Expense.objects.all()  # adjust app/model name
     products_qs = Product.objects.all()
+
+    # sales_qs = Sale.objects.all()
+    # expenses_qs = Expense.objects.all()
 
     if not (request.user.groups.filter(name="Admin").exists() or request.user.groups.filter(name="Accountant").exists()):
         sales_qs = sales_qs.filter(created_by=request.user)
@@ -74,6 +78,23 @@ def analytics_dashboard(request):
         "top_products": top_products,
     }
     return render(request, "analytics/dashboard.html", context)
+
+
+
+# def analytics_dashboard(request):
+#     sales_qs = visible_qs(Sale.objects.all(), request.user)
+#     expenses_qs = visible_qs(Expense.objects.all(), request.user)  # adjust app/model name
+
+#     total_sales = sales_qs.aggregate(s=Sum("total_amount"))["s"] or Decimal("0.00")
+#     total_expenses = expenses_qs.aggregate(s=Sum("amount"))["s"] or Decimal("0.00")
+#     total_profit = total_sales - total_expenses
+
+#     return render(request, "analytics/dashboard.html", {
+#         "total_sales": total_sales,
+#         "total_expenses": total_expenses,
+#         "total_profit": total_profit,
+#         # plus your chart lists computed from sales_qs/expenses_qs
+#     })
 
 
 # from django.shortcuts import render

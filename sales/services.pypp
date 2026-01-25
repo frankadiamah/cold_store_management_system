@@ -1,0 +1,153 @@
+# sales/services.py
+from decimal import Decimal
+
+def deduct_weight_from_product(product, kg_to_deduct: Decimal):
+    """
+    Deducts kg from product.open_box_remaining_kg first.
+    Only reduces total boxes when open_box_remaining_kg becomes 0 (box completed).
+
+    This matches: "box deducted only when cumulative sold reaches exactly 30kg"
+    """
+    kg_to_deduct = Decimal(kg_to_deduct).quantize(Decimal("0.01"))
+    if kg_to_deduct <= 0:
+        return
+
+    # sanity check available
+    available = (Decimal(product.sealed_boxes) * product.box_weight_kg) + (product.open_box_remaining_kg or Decimal("0.00"))
+    if kg_to_deduct > available:
+        raise ValueError(f"Not enough stock kg. Available {available}, requested {kg_to_deduct}")
+
+    while kg_to_deduct > 0:
+        # If no open box, open one from sealed boxes (but total boxes doesn't reduce yet)
+        if (product.open_box_remaining_kg or Decimal("0.00")) <= 0:
+            if product.sealed_boxes <= 0:
+                raise ValueError("No sealed boxes left to open.")
+            product.sealed_boxes -= 1
+            product.open_box_remaining_kg = product.box_weight_kg
+
+        # Deduct from the open box
+        take = min(product.open_box_remaining_kg, kg_to_deduct)
+        product.open_box_remaining_kg = (product.open_box_remaining_kg - take).quantize(Decimal("0.01"))
+        kg_to_deduct = (kg_to_deduct - take).quantize(Decimal("0.01"))
+
+        # If open box is finished => total boxes effectively drops by 1 (because it’s now 0 and removed)
+        if product.open_box_remaining_kg <= 0:
+            product.open_box_remaining_kg = Decimal("0.00")
+
+    product.save(update_fields=["sealed_boxes", "open_box_remaining_kg"])
+
+
+
+
+"""# inventory/services.py
+from decimal import Decimal
+from django.db import transaction
+from django.utils import timezone
+from .models import Product, StockBox, SaleableWeightSize, StockReceipt, StockReceipt, WeightSizeAllocation
+
+# deduction logic (NEW file)
+
+@transaction.atomic
+def ensure_default_sizes(product: Product):
+    """
+    # Create default 5/10/20/30 sizes if missing (optional).
+"""
+    defaults = [Decimal("5"), Decimal("10"), Decimal("20"), Decimal("30")]
+    for s in defaults:
+        SaleableWeightSize.objects.get_or_create(product=product, size_kg=s, defaults={"price": Decimal("0.00")})
+    for size in product.weight_sizes.all():
+        WeightSizeAllocation.objects.get_or_create(size=size)
+
+
+@transaction.atomic
+def get_next_available_box(product: Product):
+    return (
+        StockBox.objects
+        .select_for_update()
+        .filter(product=product, remaining_kg__gt=0)
+        .order_by("id")
+        .first()
+    )
+
+
+@transaction.atomic
+def consume_weight_from_boxes(product: Product, size_kg: Decimal, qty_units: int):
+    """
+    # Consume total_kg = size_kg * qty_units from StockBox.
+    # Start from allocation.current_box; if it finishes, continue with next boxes.
+"""
+    total_to_consume = (Decimal(size_kg) * Decimal(qty_units)).quantize(Decimal("0.01"))
+
+    if total_to_consume <= 0:
+        return
+
+    size = SaleableWeightSize.objects.select_for_update().get(product=product, size_kg=size_kg)
+    alloc, _ = WeightSizeAllocation.objects.select_for_update().get_or_create(size=size)
+
+    # pick current box if missing/consumed
+    if not alloc.current_box or alloc.current_box.remaining_kg <= 0:
+        alloc.current_box = get_next_available_box(product)
+        alloc.save(update_fields=["current_box"])
+
+    while total_to_consume > 0:
+        box = alloc.current_box
+        if not box:
+            raise ValueError(f"Not enough stock for {product.name}. Needed {total_to_consume}kg more.")
+
+        box = StockBox.objects.select_for_update().get(id=box.id)
+
+        if box.remaining_kg <= 0:
+            # move to next
+            alloc.current_box = get_next_available_box(product)
+            alloc.save(update_fields=["current_box"])
+            continue
+
+        take = min(box.remaining_kg, total_to_consume)
+        box.remaining_kg = (box.remaining_kg - take).quantize(Decimal("0.01"))
+
+        if box.remaining_kg <= 0:
+            box.remaining_kg = Decimal("0.00")
+            box.consumed_on = timezone.now()
+
+        box.save(update_fields=["remaining_kg", "consumed_on"])
+
+        total_to_consume = (total_to_consume - take).quantize(Decimal("0.01"))
+
+        if total_to_consume > 0:
+            alloc.current_box = get_next_available_box(product)
+            alloc.save(update_fields=["current_box"])
+            continue     #all are not chatGpt codes
+@transaction.atomic
+def restock_product(product: Product, boxes_info: list[dict], received_by=None):
+    """
+    # Restock product with given boxes_info.
+    # boxes_info: list of dicts with keys 'boxes_received' and 'box_weight_kg'.
+    # Example: [{'boxes_received': 10, 'box_weight_kg': 30.0}, ...]
+"""
+    for info in boxes_info:
+        boxes_received = info.get('boxes_received', 0)
+        box_weight_kg = Decimal(info.get('box_weight_kg', '0.00')).quantize(Decimal("0.01"))
+
+        if boxes_received <= 0 or box_weight_kg <= 0:
+            continue
+
+        receipt = StockReceipt.objects.create(
+            product=product,
+            boxes_received=boxes_received,
+            box_weight_kg=box_weight_kg,
+            received_by=received_by
+        )
+
+        # Create StockBox entries
+        stock_boxes = [
+            StockBox(
+                receipt=receipt,
+                product=product,
+                capacity_kg=box_weight_kg,
+                remaining_kg=box_weight_kg
+            )
+            for _ in range(boxes_received)
+        ]
+        StockBox.objects.bulk_create(stock_boxes)
+        
+"""

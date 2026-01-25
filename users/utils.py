@@ -1,7 +1,8 @@
 # users/utils.py
 from django.contrib.auth.decorators import user_passes_test
 from django.core.exceptions import PermissionDenied
-
+ 
+ 
 def in_group(group_name):
     def predicate(user):
         if not user.is_authenticated:
