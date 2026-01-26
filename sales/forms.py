@@ -130,192 +130,69 @@ class CreditPaymentForm(forms.ModelForm):
         if amt <= Decimal("0.00"):
             raise forms.ValidationError("Payment amount must be greater than 0.")
         return amt
-"""
+# """
 
-# sales/forms.py
-from decimal import Decimal
-from django import forms
-from .models import Sale, SaleItem, CreditPayment
-from inventory.models import Product, SaleableWeightSize
-
-
-class SaleForm(forms.ModelForm):
-    amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
-    due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-
-    apply_vat = forms.BooleanField(required=False, initial=False)
-
-    class Meta:
-        model = Sale
-        fields = [
-            "customer_name",
-            "customer_phone",
-            "payment_method",
-            "discount",
-            "apply_vat",
-            "amount_paid",
-            "due_date",
-        ]
-
-    def clean(self):
-        cleaned = super().clean()
-        pm = cleaned.get("payment_method")
-        amount_paid = cleaned.get("amount_paid") or Decimal("0.00")
-
-        if pm != "credit":
-            cleaned["amount_paid"] = Decimal("0.00")
-            cleaned["due_date"] = None
-
-        if amount_paid < Decimal("0.00"):
-            self.add_error("amount_paid", "Amount paid cannot be negative.")
-
-        return cleaned
+# # sales/forms.py
+# from decimal import Decimal
+# from django import forms
+# from .models import Sale, SaleItem, CreditPayment
+# from inventory.models import Product, SaleableWeightSize
 
 
-class SaleItemForm(forms.ModelForm):
-    class Meta:
-        model = SaleItem
-        fields = ["product", "weight_size", "quantity", "unit_price"]
+# class SaleForm(forms.ModelForm):
+#     amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
+#     due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+#     apply_vat = forms.BooleanField(required=False, initial=False)
 
-        self.fields["weight_size"].required = False
-        self.fields["weight_size"].queryset = SaleableWeightSize.objects.none()
+#     class Meta:
+#         model = Sale
+#         fields = [
+#             "customer_name",
+#             "customer_phone",
+#             "payment_method",
+#             "discount",
+#             "apply_vat",
+#             "amount_paid",
+#             "due_date",
+#         ]
 
-        # If product chosen, filter sizes
-        pid = self.data.get(self.add_prefix("product")) or (self.initial.get("product") if self.initial else None)
-        if pid:
-            try:
-                self.fields["weight_size"].queryset = SaleableWeightSize.objects.filter(product_id=int(pid))
-            except Exception:
-                pass
+#     def clean(self):
+#         cleaned = super().clean()
+#         pm = cleaned.get("payment_method")
+#         amount_paid = cleaned.get("amount_paid") or Decimal("0.00")
 
-        self.fields["product"].widget.attrs.update({"class": "product-select"})
-        self.fields["weight_size"].widget.attrs.update({"class": "weight-size-select"})
-        self.fields["quantity"].widget.attrs.update({"class": "qty-input"})
-        self.fields["unit_price"].widget.attrs.update({"class": "price-input", "readonly": "readonly"})
+#         if pm != "credit":
+#             cleaned["amount_paid"] = Decimal("0.00")
+#             cleaned["due_date"] = None
 
-        self.fields["product"].queryset = Product.objects.all()
+#         if amount_paid < Decimal("0.00"):
+#             self.add_error("amount_paid", "Amount paid cannot be negative.")
 
-    def clean(self):
-        cleaned = super().clean()
-        product = cleaned.get("product")
-        qty = cleaned.get("quantity") or 0
-
-        if product and getattr(product, "track_method", "unit") == "unit":
-            if qty > product.quantity:
-                raise forms.ValidationError(f"Not enough stock! Available: {product.quantity}")
-
-        if product and getattr(product, "track_method", "unit") == "boxed_weight":
-            if not cleaned.get("weight_size"):
-                raise forms.ValidationError("Please select a weight size (5kg/10kg/20kg/30kg).")
-
-        return cleaned
+#         return cleaned
 
 
-class CreditPaymentForm(forms.ModelForm):
-    class Meta:
-        model = CreditPayment
-        fields = ["amount", "payment_method", "reference"]
-
-    def clean_amount(self):
-        amt = self.cleaned_data.get("amount") or Decimal("0.00")
-        if amt <= Decimal("0.00"):
-            raise forms.ValidationError("Payment amount must be greater than 0.")
-        return amt
-"""
-
-
-
-"""# sales/forms.py
-from decimal import Decimal
-from django import forms
-from .models import Sale, SaleItem, CreditPayment
-from inventory.models import Product
-
-
-class SaleForm(forms.ModelForm):
-    # Only used when payment_method == "credit"
-    amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
-    due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
-    apply_vat = forms.BooleanField(required=False, initial=False)  # ✅ NEW
-
-    class Meta:
-        model = Sale
-        fields = ["customer_name", "customer_phone", "payment_method", "discount", "apply_vat", "amount_paid", "due_date"]
-
-    def clean(self):
-        cleaned = super().clean()
-        pm = cleaned.get("payment_method")
-        
-        cleaned["apply_vat"] = bool(cleaned.get("apply_vat"))
-        amount_paid = cleaned.get("amount_paid") or Decimal("0.00")
-        due_date = cleaned.get("due_date")
-         # ✅ ensure apply_vat becomes True/False cleanly
-
-        if pm == "credit":
-            # optional required due date (enable if client insists)
-            # if not due_date:
-            #     self.add_error("due_date", "Due date is required for credit sales.")
-            if amount_paid < Decimal("0.00"):
-                self.add_error("amount_paid", "Amount paid cannot be negative.")
-        else:
-            # not credit -> ignore these
-            cleaned["amount_paid"] = Decimal("0.00")
-            cleaned["due_date"] = None
-
-        return cleaned
-
-# sales/forms.py
-from django import forms
-from .models import SaleItem
-from inventory.models import SaleableWeightSize
-
-class SaleItemForm(forms.ModelForm):
-    class Meta:
-        model = SaleItem
-        fields = ["product", "weight_size", "quantity", "unit_price"]
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
-        self.fields["weight_size"].queryset = SaleableWeightSize.objects.none()
-        self.fields["weight_size"].required = False
-
-        if self.data.get("product"):
-            try:
-                pid = int(self.data.get("product"))
-                self.fields["weight_size"].queryset = SaleableWeightSize.objects.filter(product_id=pid)
-            except:
-                pass
-
-        self.fields["product"].widget.attrs.update({"class": "product-select"})
-        self.fields["weight_size"].widget.attrs.update({"class": "weight-size-select"})
-        self.fields["quantity"].widget.attrs.update({"class": "qty-input"})
-        self.fields["unit_price"].widget.attrs.update({"class": "price-input", "readonly": "readonly"})
-    def clean(self): #added by not by chatGPT
-        cleaned = super().clean()
-        product = cleaned.get("product")
-        weight_size = cleaned.get("weight_size")
-        qty = cleaned.get("quantity")
-
-        if product and weight_size:
-            if weight_size.product != product:
-                raise forms.ValidationError("Selected weight size does not match the product.")
-
-        if product and qty and qty > product.quantity:
-            raise forms.ValidationError(f"Not enough stock! Available: {product.quantity}")
-        return cleaned
 # class SaleItemForm(forms.ModelForm):
 #     class Meta:
 #         model = SaleItem
-#         fields = ["product", "quantity", "unit_price"]
+#         fields = ["product", "weight_size", "quantity", "unit_price"]
 
 #     def __init__(self, *args, **kwargs):
 #         super().__init__(*args, **kwargs)
 
+#         self.fields["weight_size"].required = False
+#         self.fields["weight_size"].queryset = SaleableWeightSize.objects.none()
+
+#         # If product chosen, filter sizes
+#         pid = self.data.get(self.add_prefix("product")) or (self.initial.get("product") if self.initial else None)
+#         if pid:
+#             try:
+#                 self.fields["weight_size"].queryset = SaleableWeightSize.objects.filter(product_id=int(pid))
+#             except Exception:
+#                 pass
+
 #         self.fields["product"].widget.attrs.update({"class": "product-select"})
+#         self.fields["weight_size"].widget.attrs.update({"class": "weight-size-select"})
 #         self.fields["quantity"].widget.attrs.update({"class": "qty-input"})
 #         self.fields["unit_price"].widget.attrs.update({"class": "price-input", "readonly": "readonly"})
 
@@ -324,25 +201,148 @@ class SaleItemForm(forms.ModelForm):
 #     def clean(self):
 #         cleaned = super().clean()
 #         product = cleaned.get("product")
+#         qty = cleaned.get("quantity") or 0
+
+#         if product and getattr(product, "track_method", "unit") == "unit":
+#             if qty > product.quantity:
+#                 raise forms.ValidationError(f"Not enough stock! Available: {product.quantity}")
+
+#         if product and getattr(product, "track_method", "unit") == "boxed_weight":
+#             if not cleaned.get("weight_size"):
+#                 raise forms.ValidationError("Please select a weight size (5kg/10kg/20kg/30kg).")
+
+#         return cleaned
+
+
+# class CreditPaymentForm(forms.ModelForm):
+#     class Meta:
+#         model = CreditPayment
+#         fields = ["amount", "payment_method", "reference"]
+
+#     def clean_amount(self):
+#         amt = self.cleaned_data.get("amount") or Decimal("0.00")
+#         if amt <= Decimal("0.00"):
+#             raise forms.ValidationError("Payment amount must be greater than 0.")
+#         return amt
+# """
+
+
+
+# """# sales/forms.py
+# from decimal import Decimal
+# from django import forms
+# from .models import Sale, SaleItem, CreditPayment
+# from inventory.models import Product
+
+
+# class SaleForm(forms.ModelForm):
+#     # Only used when payment_method == "credit"
+#     amount_paid = forms.DecimalField(required=False, min_value=Decimal("0.00"))
+#     due_date = forms.DateField(required=False, widget=forms.DateInput(attrs={"type": "date"}))
+#     apply_vat = forms.BooleanField(required=False, initial=False)  # ✅ NEW
+
+#     class Meta:
+#         model = Sale
+#         fields = ["customer_name", "customer_phone", "payment_method", "discount", "apply_vat", "amount_paid", "due_date"]
+
+#     def clean(self):
+#         cleaned = super().clean()
+#         pm = cleaned.get("payment_method")
+        
+#         cleaned["apply_vat"] = bool(cleaned.get("apply_vat"))
+#         amount_paid = cleaned.get("amount_paid") or Decimal("0.00")
+#         due_date = cleaned.get("due_date")
+#          # ✅ ensure apply_vat becomes True/False cleanly
+
+#         if pm == "credit":
+#             # optional required due date (enable if client insists)
+#             # if not due_date:
+#             #     self.add_error("due_date", "Due date is required for credit sales.")
+#             if amount_paid < Decimal("0.00"):
+#                 self.add_error("amount_paid", "Amount paid cannot be negative.")
+#         else:
+#             # not credit -> ignore these
+#             cleaned["amount_paid"] = Decimal("0.00")
+#             cleaned["due_date"] = None
+
+#         return cleaned
+
+# # sales/forms.py
+# from django import forms
+# from .models import SaleItem
+# from inventory.models import SaleableWeightSize
+
+# class SaleItemForm(forms.ModelForm):
+#     class Meta:
+#         model = SaleItem
+#         fields = ["product", "weight_size", "quantity", "unit_price"]
+
+#     def __init__(self, *args, **kwargs):
+#         super().__init__(*args, **kwargs)
+
+#         self.fields["weight_size"].queryset = SaleableWeightSize.objects.none()
+#         self.fields["weight_size"].required = False
+
+#         if self.data.get("product"):
+#             try:
+#                 pid = int(self.data.get("product"))
+#                 self.fields["weight_size"].queryset = SaleableWeightSize.objects.filter(product_id=pid)
+#             except:
+#                 pass
+
+#         self.fields["product"].widget.attrs.update({"class": "product-select"})
+#         self.fields["weight_size"].widget.attrs.update({"class": "weight-size-select"})
+#         self.fields["quantity"].widget.attrs.update({"class": "qty-input"})
+#         self.fields["unit_price"].widget.attrs.update({"class": "price-input", "readonly": "readonly"})
+#     def clean(self): #added by not by chatGPT
+#         cleaned = super().clean()
+#         product = cleaned.get("product")
+#         weight_size = cleaned.get("weight_size")
 #         qty = cleaned.get("quantity")
+
+#         if product and weight_size:
+#             if weight_size.product != product:
+#                 raise forms.ValidationError("Selected weight size does not match the product.")
 
 #         if product and qty and qty > product.quantity:
 #             raise forms.ValidationError(f"Not enough stock! Available: {product.quantity}")
 #         return cleaned
+# # class SaleItemForm(forms.ModelForm):
+# #     class Meta:
+# #         model = SaleItem
+# #         fields = ["product", "quantity", "unit_price"]
+
+# #     def __init__(self, *args, **kwargs):
+# #         super().__init__(*args, **kwargs)
+
+# #         self.fields["product"].widget.attrs.update({"class": "product-select"})
+# #         self.fields["quantity"].widget.attrs.update({"class": "qty-input"})
+# #         self.fields["unit_price"].widget.attrs.update({"class": "price-input", "readonly": "readonly"})
+
+# #         self.fields["product"].queryset = Product.objects.all()
+
+# #     def clean(self):
+# #         cleaned = super().clean()
+# #         product = cleaned.get("product")
+# #         qty = cleaned.get("quantity")
+
+# #         if product and qty and qty > product.quantity:
+# #             raise forms.ValidationError(f"Not enough stock! Available: {product.quantity}")
+# #         return cleaned
 
 
-class CreditPaymentForm(forms.ModelForm):
-    class Meta:
-        model = CreditPayment
-        fields = ["amount", "payment_method", "reference"]
+# class CreditPaymentForm(forms.ModelForm):
+#     class Meta:
+#         model = CreditPayment
+#         fields = ["amount", "payment_method", "reference"]
 
-    def clean_amount(self):
-        amt = self.cleaned_data.get("amount") or Decimal("0.00")
-        if amt <= Decimal("0.00"):
-            raise forms.ValidationError("Payment amount must be greater than 0.")
-        return amt
-"""
-# # sales/forms.py
+#     def clean_amount(self):
+#         amt = self.cleaned_data.get("amount") or Decimal("0.00")
+#         if amt <= Decimal("0.00"):
+#             raise forms.ValidationError("Payment amount must be greater than 0.")
+#         return amt
+# """
+# # # sales/forms.py
 # from django import forms
 # from decimal import Decimal
 # from .models import Sale, SaleItem, CreditPayment

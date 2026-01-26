@@ -25,7 +25,6 @@ from django.http import HttpResponse
 from reportlab.lib.pagesizes import A5, landscape
 from reportlab.pdfgen import canvas
 
-from inventory.models import Product, ProductWeightPrice
 from inventory.services import consume_weight
 
 # from .services import deduct_weight_from_product
@@ -489,237 +488,237 @@ def sale_receipt(request, sale_id):
     })
 
 
-"""# sales/views.py
-from decimal import Decimal
-import json
-from io import BytesIO
-import base64
-from urllib import request
-import qrcode
+# """# sales/views.py
+# from decimal import Decimal
+# import json
+# from io import BytesIO
+# import base64
+# from urllib import request
+# import qrcode
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib.auth.decorators import login_required
-from django.forms import formset_factory
-from django.db import transaction
-from django.db.models import Sum, F, ExpressionWrapper, DecimalField
+# from django.shortcuts import render, redirect, get_object_or_404
+# from django.contrib.auth.decorators import login_required
+# from django.forms import formset_factory
+# from django.db import transaction
+# from django.db.models import Sum, F, ExpressionWrapper, DecimalField
 
-# from sales.utils import visible_queryset_for_user
-from users.utils import has_any_group
-from .models import Sale, SaleItem, CreditPayment, VAT_RATE
-from .forms import SaleForm, SaleItemForm, CreditPaymentForm
-from inventory.models import Product, SaleableWeightSize
+# # from sales.utils import visible_queryset_for_user
+# from users.utils import has_any_group
+# from .models import Sale, SaleItem, CreditPayment, VAT_RATE
+# from .forms import SaleForm, SaleItemForm, CreditPaymentForm
+# from inventory.models import Product, SaleableWeightSize
 
-from django.http import HttpResponse
-from reportlab.lib.pagesizes import A5, landscape
-from reportlab.pdfgen import canvas
-
-
-def user_sale_type(user):
-    if user.groups.filter(name="Wholesale").exists():
-        return "wholesale"
-    if user.groups.filter(name="Retail").exists():
-        return "retail"
-    return "retail"
+# from django.http import HttpResponse
+# from reportlab.lib.pagesizes import A5, landscape
+# from reportlab.pdfgen import canvas
 
 
-@login_required
-@has_any_group("Admin", "Staff", "Retail", "Wholesale")
-@transaction.atomic
-def create_sale(request):
-    ItemFormset = formset_factory(SaleItemForm, extra=1)
-    stype = user_sale_type(request.user)
+# def user_sale_type(user):
+#     if user.groups.filter(name="Wholesale").exists():
+#         return "wholesale"
+#     if user.groups.filter(name="Retail").exists():
+#         return "retail"
+#     return "retail"
 
-    # ✅ Build weights json for frontend
-    weights = {}
-    for p in Product.objects.all():
-        sizes = SaleableWeightSize.objects.filter(product=p).order_by("size_kg")
-        weights[str(p.id)] = [
-            {
-                "id": s.id,
-                "label": f"{s.size_kg}kg",
-                "size_kg": str(s.size_kg),
-                "retail_price": float(s.retail_price or 0),
-                "wholesale_price": float(s.wholesale_price or 0),
-            }
-            for s in sizes
-        ]
 
-    if request.method == "POST":
-        sale_form = SaleForm(request.POST)
-        formset = ItemFormset(request.POST)
+# @login_required
+# @has_any_group("Admin", "Staff", "Retail", "Wholesale")
+# @transaction.atomic
+# def create_sale(request):
+#     ItemFormset = formset_factory(SaleItemForm, extra=1)
+#     stype = user_sale_type(request.user)
 
-        if sale_form.is_valid() and formset.is_valid():
-            sale = sale_form.save(commit=False)
-            sale.created_by = request.user
-            sale.sale_type = stype
-            sale.is_credit = (sale_form.cleaned_data.get("payment_method") == "credit")
-            sale.apply_vat = bool(sale_form.cleaned_data.get("apply_vat"))
-            sale.save()
+#     # ✅ Build weights json for frontend
+#     weights = {}
+#     for p in Product.objects.all():
+#         sizes = SaleableWeightSize.objects.filter(product=p).order_by("size_kg")
+#         weights[str(p.id)] = [
+#             {
+#                 "id": s.id,
+#                 "label": f"{s.size_kg}kg",
+#                 "size_kg": str(s.size_kg),
+#                 "retail_price": float(s.retail_price or 0),
+#                 "wholesale_price": float(s.wholesale_price or 0),
+#             }
+#             for s in sizes
+#         ]
 
-            subtotal = Decimal("0.00")
+#     if request.method == "POST":
+#         sale_form = SaleForm(request.POST)
+#         formset = ItemFormset(request.POST)
 
-            # save items
-            for f in formset:
-                if f.cleaned_data and f.cleaned_data.get("product"):
-                    item = f.save(commit=False)
-                    item.sale = sale
-                    product = item.product
+#         if sale_form.is_valid() and formset.is_valid():
+#             sale = sale_form.save(commit=False)
+#             sale.created_by = request.user
+#             sale.sale_type = stype
+#             sale.is_credit = (sale_form.cleaned_data.get("payment_method") == "credit")
+#             sale.apply_vat = bool(sale_form.cleaned_data.get("apply_vat"))
+#             sale.save()
 
-                    # ✅ FORCE server-side unit_price
-                    if getattr(product, "track_method", "unit") == "boxed_weight":
-                        size = item.weight_size
-                        if not size:
-                            raise ValueError("Weight size missing for boxed-weight product.")
+#             subtotal = Decimal("0.00")
 
-                        if sale.sale_type == "wholesale":
-                            item.unit_price = size.wholesale_price or Decimal("0.00")
-                        else:
-                            item.unit_price = size.retail_price or Decimal("0.00")
+#             # save items
+#             for f in formset:
+#                 if f.cleaned_data and f.cleaned_data.get("product"):
+#                     item = f.save(commit=False)
+#                     item.sale = sale
+#                     product = item.product
 
-                    else:
-                        if sale.sale_type == "wholesale":
-                            item.unit_price = product.wholesale_price or Decimal("0.00")
-                        else:
-                            item.unit_price = product.unit_price or Decimal("0.00")
+#                     # ✅ FORCE server-side unit_price
+#                     if getattr(product, "track_method", "unit") == "boxed_weight":
+#                         size = item.weight_size
+#                         if not size:
+#                             raise ValueError("Weight size missing for boxed-weight product.")
 
-                    item.save()
-                    subtotal += item.line_total()
+#                         if sale.sale_type == "wholesale":
+#                             item.unit_price = size.wholesale_price or Decimal("0.00")
+#                         else:
+#                             item.unit_price = size.retail_price or Decimal("0.00")
 
-            discount = sale_form.cleaned_data.get("discount") or Decimal("0.00")
-            subtotal_after_discount = subtotal - Decimal(discount)
-            if subtotal_after_discount < Decimal("0.00"):
-                subtotal_after_discount = Decimal("0.00")
+#                     else:
+#                         if sale.sale_type == "wholesale":
+#                             item.unit_price = product.wholesale_price or Decimal("0.00")
+#                         else:
+#                             item.unit_price = product.unit_price or Decimal("0.00")
 
-            # ✅ VAT optional
-            vat = Decimal("0.00")
-            if sale.apply_vat:
-                vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"))
+#                     item.save()
+#                     subtotal += item.line_total()
 
-            grand = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
+#             discount = sale_form.cleaned_data.get("discount") or Decimal("0.00")
+#             subtotal_after_discount = subtotal - Decimal(discount)
+#             if subtotal_after_discount < Decimal("0.00"):
+#                 subtotal_after_discount = Decimal("0.00")
 
-            sale.subtotal_amount = subtotal_after_discount
-            sale.vat_amount = vat
-            sale.total_amount = grand
-            sale.due_date = sale_form.cleaned_data.get("due_date")
-            sale.save(update_fields=["subtotal_amount", "vat_amount", "total_amount", "due_date", "apply_vat"])
+#             # ✅ VAT optional
+#             vat = Decimal("0.00")
+#             if sale.apply_vat:
+#                 vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01"))
 
-            # credit initial payment
-            if sale.is_credit:
-                amount_paid = sale_form.cleaned_data.get("amount_paid") or Decimal("0.00")
-                amount_paid = Decimal(amount_paid)
+#             grand = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
 
-                if amount_paid < Decimal("0.00"):
-                    amount_paid = Decimal("0.00")
-                if amount_paid > sale.total_amount:
-                    amount_paid = sale.total_amount
+#             sale.subtotal_amount = subtotal_after_discount
+#             sale.vat_amount = vat
+#             sale.total_amount = grand
+#             sale.due_date = sale_form.cleaned_data.get("due_date")
+#             sale.save(update_fields=["subtotal_amount", "vat_amount", "total_amount", "due_date", "apply_vat"])
 
-                if amount_paid > Decimal("0.00"):
-                    CreditPayment.objects.create(
-                        sale=sale,
-                        amount=amount_paid,
-                        payment_method="cash",
-                        reference="",
-                        received_by=request.user,
-                    )
+#             # credit initial payment
+#             if sale.is_credit:
+#                 amount_paid = sale_form.cleaned_data.get("amount_paid") or Decimal("0.00")
+#                 amount_paid = Decimal(amount_paid)
 
-                sale.recalc_credit(save=True)
+#                 if amount_paid < Decimal("0.00"):
+#                     amount_paid = Decimal("0.00")
+#                 if amount_paid > sale.total_amount:
+#                     amount_paid = sale.total_amount
 
-            else:
-                # non-credit fully paid
-                sale.amount_paid = sale.total_amount
-                sale.save(update_fields=["amount_paid"])
+#                 if amount_paid > Decimal("0.00"):
+#                     CreditPayment.objects.create(
+#                         sale=sale,
+#                         amount=amount_paid,
+#                         payment_method="cash",
+#                         reference="",
+#                         received_by=request.user,
+#                     )
 
-            return redirect("sale_receipt", sale_id=sale.id)
+#                 sale.recalc_credit(save=True)
 
-    else:
-        sale_form = SaleForm()
-        formset = ItemFormset()
+#             else:
+#                 # non-credit fully paid
+#                 sale.amount_paid = sale.total_amount
+#                 sale.save(update_fields=["amount_paid"])
 
-    return render(request, "sales/create_sale.html", {
-        "sale_form": sale_form,
-        "formset": formset,
-        "sale_type": stype,
-        "weights_json": json.dumps(weights),
-    })
+#             return redirect("sale_receipt", sale_id=sale.id)
+
+#     else:
+#         sale_form = SaleForm()
+#         formset = ItemFormset()
+
+#     return render(request, "sales/create_sale.html", {
+#         "sale_form": sale_form,
+#         "formset": formset,
+#         "sale_type": stype,
+#         "weights_json": json.dumps(weights),
+#     })
     
     
-@login_required
-@has_any_group("SuperAdmin", "SubAdmin","Admin", "Staff", "Retail", "Wholesale")
-def sale_list(request):
-    qs = Sale.objects.all().order_by("-timestamp")
-    qs = visible_queryset_for_user(qs, request.user)
+# @login_required
+# @has_any_group("SuperAdmin", "SubAdmin","Admin", "Staff", "Retail", "Wholesale")
+# def sale_list(request):
+#     qs = Sale.objects.all().order_by("-timestamp")
+#     qs = visible_queryset_for_user(qs, request.user)
 
-    if request.user.groups.filter(name="Wholesale").exists():
-        qs = qs.filter(sale_type="wholesale")
-    elif request.user.groups.filter(name="Retail").exists():
-        qs = qs.filter(sale_type="retail")
+#     if request.user.groups.filter(name="Wholesale").exists():
+#         qs = qs.filter(sale_type="wholesale")
+#     elif request.user.groups.filter(name="Retail").exists():
+#         qs = qs.filter(sale_type="retail")
 
-    return render(request, "sales/sale_list.html", {"sales": qs})
+#     return render(request, "sales/sale_list.html", {"sales": qs})
 
-@login_required
-@has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
-def credit_sales_list(request):
-    qs = Sale.objects.filter(is_credit=True)
+# @login_required
+# @has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
+# def credit_sales_list(request):
+#     qs = Sale.objects.filter(is_credit=True)
 
-# ✅ visibility filter
-    qs = visible_queryset_for_user(qs, request.user)
-    balance_expr = ExpressionWrapper(
-        F("total_amount") - F("amount_paid"),
-        output_field=DecimalField(max_digits=12, decimal_places=2)
-    )
+# # ✅ visibility filter
+#     qs = visible_queryset_for_user(qs, request.user)
+#     balance_expr = ExpressionWrapper(
+#         F("total_amount") - F("amount_paid"),
+#         output_field=DecimalField(max_digits=12, decimal_places=2)
+#     )
 
-    qs = Sale.objects.filter(is_credit=True).annotate(balance_due_db=balance_expr).filter(balance_due_db__gt=0).order_by("-timestamp")
+#     qs = Sale.objects.filter(is_credit=True).annotate(balance_due_db=balance_expr).filter(balance_due_db__gt=0).order_by("-timestamp")
 
-    if request.user.groups.filter(name="Wholesale").exists():
-        qs = qs.filter(sale_type="wholesale")
-    elif request.user.groups.filter(name="Retail").exists():
-        qs = qs.filter(sale_type="retail")
+#     if request.user.groups.filter(name="Wholesale").exists():
+#         qs = qs.filter(sale_type="wholesale")
+#     elif request.user.groups.filter(name="Retail").exists():
+#         qs = qs.filter(sale_type="retail")
 
-    total_outstanding = qs.aggregate(s=Sum("balance_due_db"))["s"] or Decimal("0.00")
+#     total_outstanding = qs.aggregate(s=Sum("balance_due_db"))["s"] or Decimal("0.00")
 
-    return render(request, "sales/credit_sales_list.html", {
-        "sales": qs,
-        "total_outstanding": total_outstanding,
-    })
-
-
-
-@login_required
-@has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
-@transaction.atomic
-def credit_payment_add(request, sale_id):
-    sale = get_object_or_404(Sale, id=sale_id, is_credit=True)
-
-    if request.user.groups.filter(name="Wholesale").exists() and sale.sale_type != "wholesale":
-        return redirect("credit_sales_list")
-    if request.user.groups.filter(name="Retail").exists() and sale.sale_type != "retail":
-        return redirect("credit_sales_list")
-
-    if request.method == "POST":
-        form = CreditPaymentForm(request.POST)
-        if form.is_valid():
-            pay = form.save(commit=False)
-
-            # cap to remaining
-            remaining = sale.balance_due_calc
-            if pay.amount > remaining:
-                pay.amount = remaining
-
-            pay.sale = sale
-            pay.received_by = request.user
-            pay.save()
-
-            sale.recalc_credit(save=True)
-            return redirect("credit_sales_list")
-    else:
-        form = CreditPaymentForm()
-
-    return render(request, "sales/credit_payment_add.html", {"sale": sale, "form": form})
-"""
+#     return render(request, "sales/credit_sales_list.html", {
+#         "sales": qs,
+#         "total_outstanding": total_outstanding,
+#     })
 
 
 
-"""# sales/views.py
+# @login_required
+# @has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
+# @transaction.atomic
+# def credit_payment_add(request, sale_id):
+#     sale = get_object_or_404(Sale, id=sale_id, is_credit=True)
+
+#     if request.user.groups.filter(name="Wholesale").exists() and sale.sale_type != "wholesale":
+#         return redirect("credit_sales_list")
+#     if request.user.groups.filter(name="Retail").exists() and sale.sale_type != "retail":
+#         return redirect("credit_sales_list")
+
+#     if request.method == "POST":
+#         form = CreditPaymentForm(request.POST)
+#         if form.is_valid():
+#             pay = form.save(commit=False)
+
+#             # cap to remaining
+#             remaining = sale.balance_due_calc
+#             if pay.amount > remaining:
+#                 pay.amount = remaining
+
+#             pay.sale = sale
+#             pay.received_by = request.user
+#             pay.save()
+
+#             sale.recalc_credit(save=True)
+#             return redirect("credit_sales_list")
+#     else:
+#         form = CreditPaymentForm()
+
+#     return render(request, "sales/credit_payment_add.html", {"sale": sale, "form": form})
+# """
+
+
+
+# """# sales/views.py
 from decimal import Decimal
 import json
 from django.shortcuts import render, redirect, get_object_or_404
@@ -1246,142 +1245,142 @@ def credit_payment_add(request, sale_id):
 
 # @login_required
 #
-"""
-def receipt_view(request, sale_id):
-    sale = get_object_or_404(Sale, id=sale_id)
-    items = SaleItem.objects.filter(sale=sale)
+# """
+# def receipt_view(request, sale_id):
+#     sale = get_object_or_404(Sale, id=sale_id)
+#     items = SaleItem.objects.filter(sale=sale)
 
-    buffer = BytesIO()
-    p = canvas.Canvas(buffer, pagesize=landscape(A5))
-    width, height = landscape(A5)
+#     buffer = BytesIO()
+#     p = canvas.Canvas(buffer, pagesize=landscape(A5))
+#     width, height = landscape(A5)
 
-    # header
-    p.setFont("Helvetica-Bold", 14)
-    p.drawCentredString(width/2, height - 20, "❄️ FRESH CHILL COLD STORE ❄️")
-    p.setFont("Helvetica", 9)
-    p.drawCentredString(width/2, height - 34, "Accra - Ghana | Tel: +233 54 000 0000")
+#     # header
+#     p.setFont("Helvetica-Bold", 14)
+#     p.drawCentredString(width/2, height - 20, "❄️ FRESH CHILL COLD STORE ❄️")
+#     p.setFont("Helvetica", 9)
+#     p.drawCentredString(width/2, height - 34, "Accra - Ghana | Tel: +233 54 000 0000")
 
-    # details
-    y = height - 56
-    p.setFont("Helvetica", 8)
-    p.drawString(20, y, f"Date: {sale.timestamp.strftime('%Y-%m-%d %H:%M')}")
-    p.drawRightString(width - 20, y, f"Receipt: CS-{sale.id:04d}")
-    y -= 14
-    cashier = sale.created_by.get_full_name() if sale.created_by and sale.created_by.get_full_name() else (sale.created_by.username if sale.created_by else '—')
-    p.drawString(20, y, f"Cashier: {cashier}")
-    y -= 12
-    p.drawString(20, y, f"Customer: {sale.customer_name or 'Walk-in Customer'}")
-    y -= 12
-    p.drawString(20, y, f"Payment: {sale.get_payment_method_display() if hasattr(sale, 'get_payment_method_display') else sale.payment_method}")
+#     # details
+#     y = height - 56
+#     p.setFont("Helvetica", 8)
+#     p.drawString(20, y, f"Date: {sale.timestamp.strftime('%Y-%m-%d %H:%M')}")
+#     p.drawRightString(width - 20, y, f"Receipt: CS-{sale.id:04d}")
+#     y -= 14
+#     cashier = sale.created_by.get_full_name() if sale.created_by and sale.created_by.get_full_name() else (sale.created_by.username if sale.created_by else '—')
+#     p.drawString(20, y, f"Cashier: {cashier}")
+#     y -= 12
+#     p.drawString(20, y, f"Customer: {sale.customer_name or 'Walk-in Customer'}")
+#     y -= 12
+#     p.drawString(20, y, f"Payment: {sale.get_payment_method_display() if hasattr(sale, 'get_payment_method_display') else sale.payment_method}")
 
-    # table header
-    y -= 18
-    p.setFont("Helvetica-Bold", 9)
-    p.drawString(20, y, "Item")
-    p.drawRightString(200, y, "Qty")
-    p.drawRightString(260, y, "Price (₵)")
-    p.drawRightString(340, y, "Total (₵)")
-    p.line(15, y-2, width-15, y-2)
-    y -= 12
-    p.setFont("Helvetica", 9)
+#     # table header
+#     y -= 18
+#     p.setFont("Helvetica-Bold", 9)
+#     p.drawString(20, y, "Item")
+#     p.drawRightString(200, y, "Qty")
+#     p.drawRightString(260, y, "Price (₵)")
+#     p.drawRightString(340, y, "Total (₵)")
+#     p.line(15, y-2, width-15, y-2)
+#     y -= 12
+#     p.setFont("Helvetica", 9)
 
-    subtotal = 0
-    for it in items:
-        name = (it.product.name[:28] + '...') if it.product and len(it.product.name) > 31 else (it.product.name if it.product else "Deleted Product")
-        p.drawString(20, y, name)
-        p.drawRightString(200, y, str(it.quantity))
-        p.drawRightString(260, y, f"{float(it.unit_price):.2f}")
-        line_total = float(it.line_total())
-        p.drawRightString(340, y, f"{line_total:.2f}")
-        subtotal += line_total
-        y -= 12
-        if y < 60:
-            p.showPage()
-            y = height - 40
-            p.setFont("Helvetica", 9)
+#     subtotal = 0
+#     for it in items:
+#         name = (it.product.name[:28] + '...') if it.product and len(it.product.name) > 31 else (it.product.name if it.product else "Deleted Product")
+#         p.drawString(20, y, name)
+#         p.drawRightString(200, y, str(it.quantity))
+#         p.drawRightString(260, y, f"{float(it.unit_price):.2f}")
+#         line_total = float(it.line_total())
+#         p.drawRightString(340, y, f"{line_total:.2f}")
+#         subtotal += line_total
+#         y -= 12
+#         if y < 60:
+#             p.showPage()
+#             y = height - 40
+#             p.setFont("Helvetica", 9)
 
-    # totals (VAT 15%)
-    y -= 6
-    p.line(15, y, width-15, y)
-    y -= 14
-    p.drawRightString(300, y, "Subtotal:")
-    p.drawRightString(340, y, f"₵{subtotal:.2f}")
-    y -= 12
-    vat = round(subtotal * 0.15, 2)
-    p.drawRightString(300, y, "VAT (15%):")
-    p.drawRightString(340, y, f"₵{vat:.2f}")
-    y -= 12
-    grand = subtotal + vat
-    p.setFont("Helvetica-Bold", 10)
-    p.drawRightString(300, y, "Total:")
-    p.drawRightString(340, y, f"₵{grand:.2f}")
+#     # totals (VAT 15%)
+#     y -= 6
+#     p.line(15, y, width-15, y)
+#     y -= 14
+#     p.drawRightString(300, y, "Subtotal:")
+#     p.drawRightString(340, y, f"₵{subtotal:.2f}")
+#     y -= 12
+#     vat = round(subtotal * 0.15, 2)
+#     p.drawRightString(300, y, "VAT (15%):")
+#     p.drawRightString(340, y, f"₵{vat:.2f}")
+#     y -= 12
+#     grand = subtotal + vat
+#     p.setFont("Helvetica-Bold", 10)
+#     p.drawRightString(300, y, "Total:")
+#     p.drawRightString(340, y, f"₵{grand:.2f}")
 
-    # QR code (optional) - embed on page bottom-right
-    try:
-        qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand:.2f}|Date:{sale.timestamp.strftime('%Y-%m-%d %H:%M')}"
-        qr = qrcode.make(qr_text)
-        qr_buffer = BytesIO()
-        qr.save(qr_buffer, format='PNG')
-        qr_buffer.seek(0)
-        img_x = width - 120
-        img_y = 20
-        p.drawInlineImage(qr_buffer, img_x, img_y, width=80, height=80)
-    except Exception:
-        pass
+#     # QR code (optional) - embed on page bottom-right
+#     try:
+#         qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand:.2f}|Date:{sale.timestamp.strftime('%Y-%m-%d %H:%M')}"
+#         qr = qrcode.make(qr_text)
+#         qr_buffer = BytesIO()
+#         qr.save(qr_buffer, format='PNG')
+#         qr_buffer.seek(0)
+#         img_x = width - 120
+#         img_y = 20
+#         p.drawInlineImage(qr_buffer, img_x, img_y, width=80, height=80)
+#     except Exception:
+#         pass
 
-    # footer
-    p.setFont("Helvetica-Oblique", 8)
-    p.drawCentredString(width/2, 18, "Thank you for your purchase! — Fresh Chill Cold Store")
+#     # footer
+#     p.setFont("Helvetica-Oblique", 8)
+#     p.drawCentredString(width/2, 18, "Thank you for your purchase! — Fresh Chill Cold Store")
 
-    p.showPage()
-    p.save()
+#     p.showPage()
+#     p.save()
 
-    pdf = buffer.getvalue()
-    buffer.close()
-    response = HttpResponse(pdf, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename="receipt_{sale.id}.pdf"'
-    return response
-
-
-VAT_RATE = Decimal("0.15")
+#     pdf = buffer.getvalue()
+#     buffer.close()
+#     response = HttpResponse(pdf, content_type='application/pdf')
+#     response['Content-Disposition'] = f'inline; filename="receipt_{sale.id}.pdf"'
+#     return response
 
 
-def sale_receipt(request, sale_id):
-    sale = get_object_or_404(Sale, id=sale_id)
-    items = sale.items.all()
+# VAT_RATE = Decimal("0.15")
 
-    subtotal = sum((it.line_total() for it in items), Decimal("0.00"))
-    discount = sale.discount or Decimal("0.00")
-    subtotal_after_discount = max(Decimal("0.00"), subtotal - discount)
 
-    vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01")) if sale.apply_vat else Decimal("0.00")
-    grand_total = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
-
-    # QR base64 (unchanged)
-    qr_base64 = ""
-    try:
-        qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand_total:.2f}|Date:{sale.timestamp.strftime('%Y-%m-%d %H:%M')}"
-        qr_img = qrcode.make(qr_text)
-        buf = BytesIO()
-        qr_img.save(buf, format="PNG")
-        buf.seek(0)
-        qr_base64 = base64.b64encode(buf.read()).decode("ascii")
-        buf.close()
-    except Exception:
-        qr_base64 = ""
-
-    return render(request, "sales/receipt.html", {
-        "sale": sale,
-        "items": items,
-        "subtotal": subtotal,
-        "discount": discount,
-        "subtotal_after_discount": subtotal_after_discount,
-        "vat": vat,
-        "grand_total": grand_total,
-        "qr_base64": qr_base64,
-    })
-"""
 # def sale_receipt(request, sale_id):
+#     sale = get_object_or_404(Sale, id=sale_id)
+#     items = sale.items.all()
+
+#     subtotal = sum((it.line_total() for it in items), Decimal("0.00"))
+#     discount = sale.discount or Decimal("0.00")
+#     subtotal_after_discount = max(Decimal("0.00"), subtotal - discount)
+
+#     vat = (subtotal_after_discount * VAT_RATE).quantize(Decimal("0.01")) if sale.apply_vat else Decimal("0.00")
+#     grand_total = (subtotal_after_discount + vat).quantize(Decimal("0.01"))
+
+#     # QR base64 (unchanged)
+#     qr_base64 = ""
+#     try:
+#         qr_text = f"Receipt:CS-{sale.id:04d}|Amount:₵{grand_total:.2f}|Date:{sale.timestamp.strftime('%Y-%m-%d %H:%M')}"
+#         qr_img = qrcode.make(qr_text)
+#         buf = BytesIO()
+#         qr_img.save(buf, format="PNG")
+#         buf.seek(0)
+#         qr_base64 = base64.b64encode(buf.read()).decode("ascii")
+#         buf.close()
+#     except Exception:
+#         qr_base64 = ""
+
+#     return render(request, "sales/receipt.html", {
+#         "sale": sale,
+#         "items": items,
+#         "subtotal": subtotal,
+#         "discount": discount,
+#         "subtotal_after_discount": subtotal_after_discount,
+#         "vat": vat,
+#         "grand_total": grand_total,
+#         "qr_base64": qr_base64,
+#     })
+# """
+# # def sale_receipt(request, sale_id):
 #     sale = get_object_or_404(Sale, id=sale_id)
 #     items = sale.items.all()
 
