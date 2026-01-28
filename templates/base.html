@@ -147,9 +147,15 @@
           Price Lists
         </li>
 
-        <li><a href="{% url 'retail_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Retail Prices</a></li>
-
+        {% comment %} <li><a href="{% url 'retail_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Retail Prices</a></li> {% endcomment %}
+        {% if request.user|has_group:"Retail" %}
+          <li><a href="{% url 'sale_list' %}?type=retail">Retail Sales</a></li>
+        {% endif %}
+        {% if request.user|has_group:"Wholesale" %}
+          <li><a href="{% url 'sale_list' %}?type=wholesale">Wholesale Sales</a></li>
+        {% endif %}
         {% if request.user|has_group:"Admin" %}
+        
           <li><a href="{% url 'wholesale_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Wholesale Prices</a></li>
           <li><a href="{% url 'stock_in' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock In</a></li>
           <li><a href="{% url 'stock_out' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock Out</a></li>

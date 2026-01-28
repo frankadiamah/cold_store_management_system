@@ -6,7 +6,6 @@ import qrcode
 from datetime import datetime, timedelta
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.shortcuts import render
 from django.utils import timezone
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
@@ -24,7 +23,6 @@ from django.http import HttpResponse
 from reportlab.lib.pagesizes import A5, landscape
 from reportlab.pdfgen import canvas
 
-from inventory.models import Product, ProductWeightPrice
 from inventory.services import consume_weight
 
 # from .services import deduct_weight_from_product
@@ -235,89 +233,122 @@ def create_sale(request):
     })
     
     
- 
+
 
 @login_required
-@has_any_group("SuperAdmin", "SubAdmin","Admin", "Staff", "Retail", "Wholesale")
+@has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
 def sale_list(request):
     qs = Sale.objects.all().order_by("-timestamp")
 
-    # ✅ Keep your existing role filtering
+    # ✅ Retail/Wholesale users only see their type
     if request.user.groups.filter(name="Wholesale").exists():
         qs = qs.filter(sale_type="wholesale")
     elif request.user.groups.filter(name="Retail").exists():
         qs = qs.filter(sale_type="retail")
 
-    # ---------------------------
-    # Filters (GET)
-    # ---------------------------
-    q = (request.GET.get("q") or "").strip()
-    start = (request.GET.get("start") or "").strip()    # YYYY-MM-DD
-    end = (request.GET.get("end") or "").strip()        # YYYY-MM-DD
-    preset = (request.GET.get("preset") or "").strip()  # today | week | month | all
-    per_page = request.GET.get("per_page") or "10"
+    # ✅ Admin/Accountant can filter with ?type=retail or ?type=wholesale
+    t = request.GET.get("type")
+    if request.user.groups.filter(name__in=["Admin", "Accountant"]).exists() and t in ["retail", "wholesale"]:
+        qs = qs.filter(sale_type=t)
 
-    # Search by customer name/phone
-    if q:
-        qs = qs.filter(
-            Q(customer_name__icontains=q) |
-            Q(customer_phone__icontains=q)
-        )
+    return render(request, "sales/sale_list.html", {"sales": qs})
 
-    # Date presets
-    now = timezone.localtime()
-    today = now.date()
 
-    if preset == "today":
-        qs = qs.filter(timestamp__date=today)
+# @login_required
+# @has_any_group("SuperAdmin", "SubAdmin","Admin", "Staff", "Retail", "Wholesale")
+# def sale_list(request):
+#     qs = Sale.objects.all().order_by("-timestamp")
 
-    elif preset == "week":
-        start_date = today - timedelta(days=6)
-        qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
+#     # ✅ Keep your existing role filtering
+#     if request.user.groups.filter(name="Wholesale").exists():
+#         qs = qs.filter(sale_type="wholesale")
+#     elif request.user.groups.filter(name="Retail").exists():
+#         qs = qs.filter(sale_type="retail")
 
-    elif preset == "month":
-        start_date = today - timedelta(days=29)
-        qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
+#     # ---------------------------
+#     # Filters (GET)
+#     # ---------------------------
+#     q = (request.GET.get("q") or "").strip()
+#     start = (request.GET.get("start") or "").strip()    # YYYY-MM-DD
+#     end = (request.GET.get("end") or "").strip()        # YYYY-MM-DD
+#     preset = (request.GET.get("preset") or "").strip()  # today | week | month | all
+#     per_page = request.GET.get("per_page") or "10"
 
-    elif preset == "all":
-        pass
+#     # Search by customer name/phone
+#     if q:
+#         qs = qs.filter(
+#             Q(customer_name__icontains=q) |
+#             Q(customer_phone__icontains=q)
+#         )
 
-    else:
-        # Custom dates
-        try:
-            if start:
-                start_date = datetime.strptime(start, "%Y-%m-%d").date()
-                qs = qs.filter(timestamp__date__gte=start_date)
-            if end:
-                end_date = datetime.strptime(end, "%Y-%m-%d").date()
-                qs = qs.filter(timestamp__date__lte=end_date)
-        except ValueError:
-            pass
+#     # Date presets
+#     now = timezone.localtime()
+#     today = now.date()
 
-    # Per-page safety
-    try:
-        per_page_int = int(per_page)
-        if per_page_int not in (10, 25, 50, 100):
-            per_page_int = 10
-    except ValueError:
-        per_page_int = 10
+#     if preset == "today":
+#         qs = qs.filter(timestamp__date=today)
 
-    # ✅ Pagination (IMPORTANT: don't name variable "paginator" if you imported Paginator)
-    p = Paginator(qs, per_page_int)
-    page_number = request.GET.get("page") or 1
-    page_obj = p.get_page(page_number)
+#     elif preset == "week":
+#         start_date = today - timedelta(days=6)
+#         qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
 
-    return render(request, "sales/sale_list.html", {
-        "sales": page_obj.object_list,
-        "page_obj": page_obj,
-        "q": q,
-        "start": start,
-        "end": end,
-        "preset": preset,
-        "per_page": per_page_int,
-        "total_count": p.count,
-    })
- 
+#     elif preset == "month":
+#         start_date = today - timedelta(days=29)
+#         qs = qs.filter(timestamp__date__gte=start_date, timestamp__date__lte=today)
+
+#     elif preset == "all":
+#         pass
+
+#     else:
+#         # Custom dates
+#         try:
+#             if start:
+#                 start_date = datetime.strptime(start, "%Y-%m-%d").date()
+#                 qs = qs.filter(timestamp__date__gte=start_date)
+#             if end:
+#                 end_date = datetime.strptime(end, "%Y-%m-%d").date()
+#                 qs = qs.filter(timestamp__date__lte=end_date)
+#         except ValueError:
+#             pass
+
+#     # Per-page safety
+#     try:
+#         per_page_int = int(per_page)
+#         if per_page_int not in (10, 25, 50, 100):
+#             per_page_int = 10
+#     except ValueError:
+#         per_page_int = 10
+
+#     # ✅ Pagination (IMPORTANT: don't name variable "paginator" if you imported Paginator)
+#     p = Paginator(qs, per_page_int)
+#     page_number = request.GET.get("page") or 1
+#     page_obj = p.get_page(page_number)
+
+#     return render(request, "sales/sale_list.html", {
+#         "sales": page_obj.object_list,
+#         "page_obj": page_obj,
+#         "q": q,
+#         "start": start,
+#         "end": end,
+#         "preset": preset,
+#         "per_page": per_page_int,
+#         "total_count": p.count,
+#     })
+
+
+@login_required
+@has_any_group("Admin", "Accountant", "Retail")
+def retail_sales_list(request):
+    qs = Sale.objects.filter(sale_type="retail").order_by("-timestamp")
+    return render(request, "sales/sale_list.html", {"sales": qs, "forced_type": "retail"})
+
+
+@login_required
+@has_any_group("Admin", "Accountant", "Wholesale")
+def wholesale_sales_list(request):
+    qs = Sale.objects.filter(sale_type="wholesale").order_by("-timestamp")
+    return render(request, "sales/sale_list.html", {"sales": qs, "forced_type": "wholesale"})
+
 
 @login_required
 @has_any_group("Admin", "Staff", "Accountant", "Retail", "Wholesale")
