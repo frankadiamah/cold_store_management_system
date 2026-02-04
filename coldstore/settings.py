@@ -55,7 +55,8 @@ if not DEBUG and (not SECRET_KEY or SECRET_KEY.startswith("django-insecure")):
 # IMPORTANT: Render domain must be allowed
 # On Render, you should set ALLOWED_HOSTS env var.
 # But we also add a safe default for your current service domain.
-DEFAULT_RENDER_HOST = "cold-store-management-system.onrender.com"
+DEFAULT_RENDER_HOST = "cold-store-management-system-6vc2.onrender.com"
+# DEFAULT_RENDER_HOST = "cold-store-management-system.onrender.com"
 
 if DEBUG:
     ALLOWED_HOSTS = ["127.0.0.1", "localhost"]

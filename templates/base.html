@@ -22,25 +22,32 @@
  <!-- 1) Apply saved theme BEFORE anything renders -->
 <script>
   (function () {
-    const saved = localStorage.getItem("theme");
+    const root = document.documentElement;
+    let saved = null;
+    try {
+      saved = localStorage.getItem("theme");
+    } catch (err) {
+      saved = null;
+    }
     const prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const theme = saved || (prefersDark ? "dark" : "light");
-    if (theme === "dark") document.documentElement.classList.add("dark");
+    const theme = (saved === "dark" || saved === "light") ? saved : (prefersDark ? "dark" : "light");
+    root.classList.toggle("dark", theme === "dark");
+    root.setAttribute("data-theme", theme);
+    root.style.colorScheme = theme;
   })();
 </script>
 
-<!-- 2) Tailwind config MUST be defined safely BEFORE CDN loads -->
-<script>
-  window.tailwind = {
-    config: {
-      darkMode: "class",
-      theme: { extend: {} }
-    }
-  };
-</script>
-
-<!-- 3) Load Tailwind CDN -->
+<!-- 2) Load Tailwind CDN -->
 <script src="https://cdn.tailwindcss.com"></script>
+
+<!-- 3) Tailwind config (ensure darkMode uses class) -->
+<script>
+  if (window.tailwind) {
+    window.tailwind.config = Object.assign({}, window.tailwind.config, {
+      darkMode: "class"
+    });
+  }
+</script>
 
   <style>
     .sidebar-scroll { height: calc(100vh - 4rem); overflow: auto; }
@@ -128,7 +135,7 @@
       </a>
 
       <!-- Desktop theme toggle -->
-      <button id="darkModeToggleDesktop" type="button"
+      <button id="darkModeToggleDesktop" type="button" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"
         class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium
                hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800"
         title="Toggle theme">
@@ -152,11 +159,13 @@
           <li><a href="{% url 'sale_list' %}?type=retail">Retail Sales</a></li>
         {% endif %}
         {% if request.user|has_group:"Wholesale" %}
-          <li><a href="{% url 'sale_list' %}?type=wholesale">Wholesale Sales</a></li>
+          <li><a href="{% url 'sale_list' %}?type=wholesale">Wholesale</a></li>
         {% endif %}
         {% if request.user|has_group:"Admin" %}
-        
-          <li><a href="{% url 'wholesale_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Wholesale Prices</a></li>
+          <li><a href="{% url 'sale_list' %}?type=wholesale">Wholesale</a></li>
+          <li><a href="{% url 'sale_list' %}?type=retail">Retail Sales</a></li>
+          
+          {% comment %} <li><a href="{% url 'wholesale_price_list' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Wholesale Prices</a></li> {% endcomment %}
           <li><a href="{% url 'stock_in' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock In</a></li>
           <li><a href="{% url 'stock_out' %}" class="block py-2 px-3 rounded hover:bg-slate-50 dark:hover:bg-slate-700">Stock Out</a></li>
         {% endif %}
@@ -226,7 +235,7 @@
 
       <div class="flex items-center gap-2">
         <!-- Mobile theme toggle -->
-        <button id="darkModeToggleMobile" type="button"
+        <button id="darkModeToggleMobile" type="button" data-theme-toggle aria-pressed="false" aria-label="Toggle theme"
           class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium
                  hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:hover:bg-slate-800">
           <span class="themeIcon">🌙</span>
@@ -277,29 +286,69 @@
     });
   }
 
-  // ✅ Theme toggle + keep both buttons in sync
-  function setThemeUI() {
-    const isDark = document.documentElement.classList.contains('dark');
-    document.querySelectorAll('.themeIcon').forEach(el => el.textContent = isDark ? '☀️' : '🌙');
-    document.querySelectorAll('.themeText').forEach(el => el.textContent = isDark ? 'Light' : 'Dark');
+  // Theme toggle + keep both buttons in sync
+  const THEME_KEY = "theme";
+  const root = document.documentElement;
+  const themeToggles = document.querySelectorAll("[data-theme-toggle]");
+
+  function getSystemTheme() {
+    return (window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches) ? "dark" : "light";
+  }
+
+  function getSavedTheme() {
+    try {
+      const saved = localStorage.getItem(THEME_KEY);
+      return (saved === "dark" || saved === "light") ? saved : null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function updateThemeUI(theme) {
+    const isDark = theme === "dark";
+    document.querySelectorAll(".themeIcon").forEach(el => {
+      el.textContent = isDark ? "\u2600\uFE0F" : "\uD83C\uDF19";
+    });
+    document.querySelectorAll(".themeText").forEach(el => {
+      el.textContent = isDark ? "Light" : "Dark";
+    });
+    themeToggles.forEach(btn => btn.setAttribute("aria-pressed", String(isDark)));
+  }
+
+  function applyTheme(theme, persist) {
+    root.classList.toggle("dark", theme === "dark");
+    root.setAttribute("data-theme", theme);
+    root.style.colorScheme = theme;
+    if (persist) {
+      try {
+        localStorage.setItem(THEME_KEY, theme);
+      } catch (err) {
+        // Ignore storage errors; theme still applies for this session.
+      }
+    }
+    updateThemeUI(theme);
   }
 
   function toggleTheme() {
-    const htmlEl = document.documentElement;
-    htmlEl.classList.toggle('dark');
-    localStorage.setItem('theme', htmlEl.classList.contains('dark') ? 'dark' : 'light');
-    setThemeUI();
+    const next = root.classList.contains("dark") ? "light" : "dark";
+    applyTheme(next, true);
   }
 
   // set correct label/icon on page load
-  setThemeUI();
+  const initialTheme = getSavedTheme() || getSystemTheme();
+  applyTheme(initialTheme, false);
 
-  const tMobile = document.getElementById('darkModeToggleMobile');
-  if (tMobile) tMobile.addEventListener('click', toggleTheme);
+  themeToggles.forEach(btn => btn.addEventListener("click", toggleTheme));
 
-  const tDesktop = document.getElementById('darkModeToggleDesktop');
-  if (tDesktop) tDesktop.addEventListener('click', toggleTheme);
+  // keep in sync with OS when user has not chosen a theme
+  const media = window.matchMedia ? window.matchMedia("(prefers-color-scheme: dark)") : null;
+  if (media) {
+    media.addEventListener("change", (e) => {
+      if (!getSavedTheme()) applyTheme(e.matches ? "dark" : "light", false);
+    });
+  }
 </script>
 
 </body>
 </html>
+
