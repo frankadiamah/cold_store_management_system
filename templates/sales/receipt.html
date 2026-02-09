@@ -1,373 +1,243 @@
 {% extends 'base.html' %}
 {% block content %}
-<div class="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow-md font-sans text-sm print:p-0 print:shadow-none print:max-w-full">
-
-  <!-- Header -->
-  <div class="text-center mb-4 print:text-center">
-    <h2 class="text-xl font-semibold text-slate-800">❄️ FRESH CHILL COLD STORE ❄️</h2>
-    <h4 class="text-sm text-slate-600">Accra - Ghana</h4>
-    <p class="text-sm text-slate-600">Tel: +233 54 000 0000</p>
-    <hr class="border-slate-300 my-2">
+<div class="receipt-page">
+  <div class="no-print receipt-actions">
+    <a href="{% url 'create_sale' %}" class="action-link">New Sale</a>
+    <a href="{% url 'receipt_view' sale.id %}" target="_blank" class="action-link primary">Download PDF</a>
+    <button onclick="window.print()" class="action-link primary">Print Receipt</button>
   </div>
 
-  <!-- Actions -->
-  {% comment %} <div class="flex justify-between items-center mb-4"> {% endcomment %}
-  <div class="flex justify-between items-center mb-4 print:hidden">
-    <div>
-      <a href="{% url 'create_sale' %}" class="px-3 py-1 bg-slate-200 rounded hover:bg-slate-300">← New Sale</a>
+  <div class="receipt">
+    <div class="center">
+      <div class="store-name">FRESH CHILL COLD STORE</div>
+      <div>Accra - Ghana</div>
+      <div>Tel: +233 54 000 0000</div>
     </div>
-    <div class="space-x-2">
-      <a href="{% url 'receipt_view' sale.id %}" target="_blank" class="px-3 py-1 bg-green-700 text-white rounded">Download PDF</a>
-      <button onclick="window.print()" class="px-3 py-1 bg-blue-600 text-white rounded">Print Receipt</button>
+
+    <div class="rule"></div>
+
+    {% if sale.is_credit %}
+    <div class="notice">
+      CREDIT SALE | Paid: GHS {{ sale.amount_paid|floatformat:2 }} | Balance: GHS {{ sale.balance_due_calc|floatformat:2 }}
     </div>
-  </div>
-
-  <!-- Receipt Info -->
-  {% if sale.is_credit %}
-  <p class="text-red-600 font-semibold">
-    CREDIT SALE • Paid: ₵{{ sale.amount_paid|floatformat:2 }} • Balance: ₵{{ sale.balance_due_calc|floatformat:2 }}
-  </p>
-  {% if sale.due_date %}
-    <p>Due date: {{ sale.due_date }}</p>
-  {% endif %}
-  {% endif %}
-
-  <div class="mb-4 space-y-1 text-slate-700">
-    <p>Date: {{ sale.timestamp|date:"Y-m-d H:i" }}</p>
-    <p>Receipt No: CS-{{ sale.id|stringformat:"04d" }}</p>
-    {% comment %} <p>Cashier: {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p> {% endcomment %}
-    <p>Cashier:
-    {% if sale.created_by %}
-    {{ sale.created_by.get_full_name|default:sale.created_by.username }}
-    {% else %}
-      —
+    {% if sale.due_date %}
+    <div>Due date: {{ sale.due_date }}</div>
     {% endif %}
-    </p>
+    {% endif %}
 
-    <p>Customer: {{ sale.customer_name|default:"Walk-in Customer" }}</p>
-    <p>Payment Method: {{ sale.get_payment_method_display }}</p>
-  </div>
+    <div class="info">
+      <div>Date: {{ sale.timestamp|date:"Y-m-d H:i" }}</div>
+      <div>Receipt: CS-{{ sale.id|stringformat:"04d" }}</div>
+      <div>Cashier:
+        {% if sale.created_by %}
+        {{ sale.created_by.get_full_name|default:sale.created_by.username }}
+        {% else %}
+        --
+        {% endif %}
+      </div>
+      <div>Customer: {{ sale.customer_name|default:"Walk-in Customer" }}</div>
+      <div>Payment: {{ sale.get_payment_method_display }}</div>
+    </div>
 
-  <!-- Items Table -->
-  <div class="overflow-x-auto">
-    <table class="w-full border-collapse print:w-full">
+    <div class="rule"></div>
+
+    <table class="items">
       <thead>
-        <tr class="bg-slate-50">
-          <th class="p-2 text-left text-xs font-medium text-slate-500">Item</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Qty</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Price (₵)</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Total (₵)</th>
+        <tr>
+          <th class="left">Item</th>
+          <th class="right">Amt</th>
         </tr>
       </thead>
-      <tbody class="divide-y divide-slate-200">
+      <tbody>
         {% for item in items %}
-        <tr>
-          {% comment %} <td class="p-2">{{ item.product.name if item.product else "Deleted product" }}</td> {% endcomment %}
-          <td class="p-2">
-              {% if item.product %}
-              {{ item.product.name }}
-              {% else %}
-              Deleted product
-              {% endif %}
-              </td>
-
-          <td class="p-2 text-right">{{ item.quantity }}</td>
-          <td class="p-2 text-right">{{ item.unit_price|floatformat:2 }}</td>
-          <td class="p-2 text-right">{{ item.line_total_amount|floatformat:2 }}</td>
-          {% comment %} <td class="p-2 text-right">{{ item.line_total|floatformat:2 }}</td> {% endcomment %}
+        <tr class="item-row">
+          <td class="left">
+            {% if item.product %}
+            {{ item.product.name }}
+            {% else %}
+            Deleted product
+            {% endif %}
+            <div class="subline">Qty {{ item.quantity }} x GHS {{ item.unit_price|floatformat:2 }}</div>
+          </td>
+          <td class="right">{{ item.line_total_amount|floatformat:2 }}</td>
         </tr>
         {% endfor %}
       </tbody>
-      <tfoot class="mt-2 border-t border-slate-700">
-        <tr class="font-semibold">
-          <td colspan="3" class="p-2 text-right">Subtotal</td>
-          <td class="p-2 text-right">₵{{ subtotal|floatformat:2 }}</td>
-        </tr>
-        {% if discount and discount|floatformat:2 != "0.00" %}
-        <tr>
-          <td colspan="3" class="p-2 text-right">Discount</td>
-          <td class="p-2 text-right">₵{{ discount|floatformat:2 }}</td>
-        </tr>
-        <tr>
-          <td colspan="3" class="p-2 text-right">Subtotal (after discount)</td>
-          <td class="p-2 text-right">₵{{ subtotal_after_discount|floatformat:2 }}</td>
-        </tr>
-        {% endif %}
-
-        {% comment %} to optionally apply vat to a specific sale {% endcomment %}
-        {% if sale.apply_vat %}
-          <tr>
-            <td colspan="3" class="p-2 text-right">VAT (15%)</td>
-            <td class="p-2 text-right">₵{{ vat|floatformat:2 }}</td>
-          </tr>
-        {% endif %}
-        {% comment %} <tr>
-          <td colspan="3" class="p-2 text-right">VAT (15%)</td>
-          <td class="p-2 text-right">₵{{ vat|floatformat:2 }}</td>
-        </tr> {% endcomment %}
-        <tr class="font-bold">
-          <td colspan="3" class="p-2 text-right">Grand Total</td>
-          <td class="p-2 text-right">₵{{ grand_total|floatformat:2 }}</td>
-        </tr>
-      </tfoot>
     </table>
-  </div>
 
-  <!-- QR Code and Footer -->
-  <div class="text-center mt-6 print:text-center">
-    {% if qr_base64 %}
-      <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code" class="mx-auto mb-2 w-24 h-24">
+    <div class="rule"></div>
+
+    <table class="totals">
+      <tr>
+        <td class="left">Subtotal</td>
+        <td class="right">GHS {{ subtotal|floatformat:2 }}</td>
+      </tr>
+      {% if discount and discount|floatformat:2 != "0.00" %}
+      <tr>
+        <td class="left">Discount</td>
+        <td class="right">GHS {{ discount|floatformat:2 }}</td>
+      </tr>
+      <tr>
+        <td class="left">Subtotal (after discount)</td>
+        <td class="right">GHS {{ subtotal_after_discount|floatformat:2 }}</td>
+      </tr>
+      {% endif %}
+      {% if sale.apply_vat %}
+      <tr>
+        <td class="left">VAT (15%)</td>
+        <td class="right">GHS {{ vat|floatformat:2 }}</td>
+      </tr>
+      {% endif %}
+      <tr class="grand">
+        <td class="left">Grand Total</td>
+        <td class="right">GHS {{ grand_total|floatformat:2 }}</td>
+      </tr>
+    </table>
+
+    {% if sale.is_credit %}
+    <table class="totals">
+      <tr>
+        <td class="left">Paid</td>
+        <td class="right">GHS {{ sale.amount_paid|floatformat:2 }}</td>
+      </tr>
+      <tr>
+        <td class="left">Balance</td>
+        <td class="right">GHS {{ sale.balance_due_calc|floatformat:2 }}</td>
+      </tr>
+    </table>
     {% endif %}
-    <p class="text-sm">Scan to verify receipt</p>
-    <p class="text-sm mt-1">Thank you for your purchase! 🧊</p>
+
+    <div class="rule"></div>
+
+    <div class="center order-block">
+      <div class="order-title">YOUR ORDER</div>
+      <div class="order-number">{{ sale.id|stringformat:"04d" }}</div>
+    </div>
+
+    {% if qr_base64 %}
+    <div class="center qr-block">
+      <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code">
+      <div class="small">Scan to verify receipt</div>
+    </div>
+    {% endif %}
+
+    <div class="center small">
+      Thank you for your purchase!
+    </div>
   </div>
 </div>
 
-<!-- Print Styles -->
-
 <style>
+  .receipt-page {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 16px 8px 40px;
+    background: #f4f4f4;
+  }
+  .receipt-actions {
+    display: flex;
+    gap: 8px;
+    margin: 16px 0;
+  }
+  .action-link {
+    background: #e5e7eb;
+    color: #111827;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    text-decoration: none;
+    border: none;
+    cursor: pointer;
+  }
+  .action-link.primary {
+    background: #2563eb;
+    color: #fff;
+  }
+  .receipt {
+    width: 80mm;
+    max-width: 320px;
+    background: #fff;
+    color: #111;
+    font-family: "Courier New", Courier, monospace;
+    font-size: 12px;
+    line-height: 1.25;
+    padding: 10px 8px 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+  }
+  .center { text-align: center; }
+  .left { text-align: left; }
+  .right { text-align: right; }
+  .store-name {
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    font-size: 13px;
+  }
+  .rule {
+    border-top: 1px dashed #666;
+    margin: 8px 0;
+  }
+  .notice {
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .info > div { margin: 2px 0; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .items th {
+    font-weight: 700;
+    border-bottom: 1px solid #999;
+    padding-bottom: 4px;
+  }
+  .item-row td {
+    vertical-align: top;
+    padding: 6px 0;
+  }
+  .subline {
+    color: #333;
+    font-size: 11px;
+    margin-top: 2px;
+  }
+  .totals td {
+    padding: 2px 0;
+  }
+  .totals .grand td {
+    border-top: 1px solid #000;
+    padding-top: 6px;
+    font-weight: 700;
+  }
+  .order-block {
+    margin: 8px 0;
+  }
+  .order-title {
+    font-size: 11px;
+    letter-spacing: 1px;
+  }
+  .order-number {
+    font-size: 28px;
+    font-weight: 700;
+  }
+  .qr-block img {
+    width: 120px;
+    height: 120px;
+    margin: 6px auto 4px;
+  }
+  .small {
+    font-size: 11px;
+  }
   @media print {
-    @page { size: A4; margin: 15mm; }
+    @page { size: 80mm auto; margin: 6mm; }
     body { background: #fff !important; color: #000 !important; }
-    a, button { display: none !important; } /* optional */
+    .receipt-page { padding: 0; background: #fff; }
+    .receipt {
+      box-shadow: none;
+      width: 80mm;
+      max-width: 80mm;
+      padding: 0;
+    }
+    .no-print { display: none !important; }
   }
 </style>
 {% endblock %}
-
-{% comment %} <style>
-  @media print {
-    @page { size: A4; margin: 15mm; }
-    body { -webkit-print-color-adjust: exact; color-adjust: exact; background: #fff; font-family: 'DejaVu Sans', sans-serif; }
-    .dark\:bg-gray-800 { background-color: #fff !important; }
-    .dark\:text-gray-100 { color: #000 !important; }
-    .shadow-md { box-shadow: none !important; }
-  }
-</style> {% endcomment %}
-
-{% comment %} {% extends 'base.html' %}
-{% block content %}
-<div class="max-w-2xl mx-auto mt-10 p-6 bg-white rounded-2xl shadow-md font-sans text-sm print:p-0 print:shadow-none print:max-w-full">
-
-  <!-- Header -->
-  <div class="text-center mb-4 print:text-center">
-    <h2 class="text-xl font-semibold text-slate-800">❄️ FRESH CHILL COLD STORE ❄️</h2>
-    <h4 class="text-sm text-slate-600">Accra - Ghana</h4>
-    <p class="text-sm text-slate-600">Tel: +233 54 000 0000</p>
-    <hr class="border-slate-300 my-2">
-  </div>
-
-  <!-- Receipt Info -->
-  <div class="mb-4 space-y-1 text-slate-700">
-    <p>Date: {{ sale.timestamp|date:"Y-m-d H:i" }}</p>
-    <p>Receipt No: CS-{{ sale.id|stringformat:"04d" }}</p>
-    
-    <p>Cashier: {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p>
-    <p>Customer: {{ sale.customer_name|default:"Walk-in Customer" }}</p>
-    <p>Payment Method: {{ sale.get_payment_method_display }}</p>
-  </div>
-
-  <!-- Items Table -->
-  <div class="overflow-x-auto">
-    <table class="w-full border-collapse print:w-full">
-      <thead>
-        <tr class="bg-slate-50">
-          <th class="p-2 text-left text-xs font-medium text-slate-500">Item</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Qty</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Price (₵)</th>
-          <th class="p-2 text-right text-xs font-medium text-slate-500">Total (₵)</th>
-        </tr>
-      </thead>
-      <tbody class="divide-y divide-slate-200">
-        {% for item in items %}
-        <tr>
-          <td class="p-2">{{ item.product.name }}</td>
-          <td class="p-2 text-right">{{ item.quantity }}</td>
-          <td class="p-2 text-right">{{ item.unit_price|floatformat:2 }}</td>
-
-          <td class="p-2 text-right">{{ item.line_total|floatformat:2 }}</td>
-        {% comment %} </tr>{{ item.total_price|floatformat:2 }} {% endcomment %}
-        {% comment %} {% endfor %}
-      </tbody>
-      <tfoot class="mt-2 border-t border-slate-300">
-        <tr class="font-semibold">
-          <td colspan="3" class="p-2 text-right">Subtotal</td>
-          <td class="p-2 text-right">₵{{ sale.total_amount|floatformat:2 }}</td>
-        </tr>
-        <tr>
-          <td colspan="3" class="p-2 text-right">VAT (15%)</td>
-          <td class="p-2 text-right">₵{{ sale.total_amount|floatformat:2|add:"0"|floatformat:2 }}</td>
-        </tr>
-        <tr class="font-bold">
-          <td colspan="3" class="p-2 text-right">Grand Total</td>
-          <td class="p-2 text-right">₵{{ sale.total_amount|floatformat:2 }}</td>
-        </tr>
-      </tfoot>
-    </table>
-  </div> {% endcomment %}
-
-  <!-- QR Code and Footer -->
-  {% comment %} <div class="text-center mt-6 print:text-center">
-    <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code" class="mx-auto mb-2 w-24 h-24">
-    <p class="text-sm">Scan to verify receipt</p>
-    <p class="text-sm mt-1">Thank you for your purchase! 🧊</p>
-  </div>
-</div> {% endcomment %}
-
-<!-- Print Styles -->
-{% comment %} <style>
-  @media print {
-    @page {
-      size: A4;
-      margin: 15mm;
-    }
-    body {
-      -webkit-print-color-adjust: exact;
-      color-adjust: exact;
-      background: #fff;
-      font-family: 'DejaVu Sans', sans-serif;
-    }
-    .dark\:bg-gray-800 { background-color: #fff !important; }
-    .dark\:text-gray-100 { color: #000 !important; }
-    .shadow-md { box-shadow: none !important; }
-  }
-</style>
-{% endblock %}   {% endcomment %}
-
-{% comment %} {% extends 'base.html' %}
-{% block content %}
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Receipt #{{ sale.id }}</title>
-  <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 13px; margin: 20px; }
-    h2, h4, p { margin: 4px 0; text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border-bottom: 1px solid #ccc; padding: 4px; text-align: right; }
-    th:first-child, td:first-child { text-align: left; }
-    .totals td { border-top: 1px solid #000; }
-    .center { text-align: center; }
-  </style>
-</head>
-<body>
-  <h2>❄️ FRESH CHILL COLD STORE ❄️</h2>
-  <h4>Accra - Ghana</h4>
-  <p>Tel: +233 54 000 0000</p>
-  <hr>
-
-  <p>Date: {{ sale.timestamp|date:"Y-m-d H:i" }}</p>
-  <p>Receipt No: CS-{{ sale.id|stringformat:"04d" }}</p>
-  <p>Cashier: {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p>
-  <p>Customer: {{ sale.customer_name|default:"Walk-in Customer" }}</p>
-  <p>Payment Method: {{ sale.get_payment_method_display }}</p>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Qty</th>
-        <th>Price (₵)</th>
-        <th>Total (₵)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <td>{{ item.product.name }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ item.unit_price }}</td>
-        <td>{{ item.total_price }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      <tr class="totals">
-        <td colspan="3">Subtotal</td>
-        <td>₵{{ sale.total_amount|floatformat:2 }}</td>
-      </tr>
-      <tr>
-        <td colspan="3">VAT (5%)</td>
-        <td>₵{{ sale.total_amount|floatformat:2|add:"0"|floatformat:2 }}</td>
-      </tr>
-      <tr class="totals">
-        <td colspan="3"><strong>Grand Total</strong></td>
-        <td><strong>₵{{ sale.total_amount|floatformat:2 }}</strong></td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <div class="center" style="margin-top: 20px;">
-    <img src="data:image/png;base64,{{ qr_base64 }}" alt="QR Code" width="100">
-    <p>Scan to verify receipt</p>
-    <p>Thank you for your purchase! 🧊</p>
-  </div>
-</body>
-</html>
-serial 77011706
-pin:ipEH5xSVHFQX0BW
-{% endblock %} {% endcomment %}
-
-
-{% comment %} <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Receipt #{{ sale.id }}</title>
-  <style>
-    body { font-family: 'DejaVu Sans', sans-serif; font-size: 13px; margin: 20px; }
-    h2, h4, p { margin: 4px 0; text-align: center; }
-    table { width: 100%; border-collapse: collapse; margin-top: 15px; }
-    th, td { border-bottom: 1px solid #ccc; padding: 4px; text-align: right; }
-    th:first-child, td:first-child { text-align: left; }
-    .totals td { border-top: 1px solid #000; }
-    .center { text-align: center; }
-  </style>
-</head>
-<body>
-  <h2>❄️ FRESH CHILL COLD STORE ❄️</h2>
-  <h4>Accra - Ghana</h4>
-  <p>Tel: +233 54 000 0000</p>
-  <hr>
-  <p>Date: {{ date|date:"Y-m-d H:i" }}</p>
-  <p>Receipt No: CS-{{ sale.id|stringformat:"04d" }}</p>
-  <p>Cashier: {{ sale.created_by.get_full_name|default:sale.created_by.username }}</p>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Item</th>
-        <th>Qty</th>
-        <th>Price (₵)</th>
-        <th>Total (₵)</th>
-      </tr>
-    </thead>
-    <tbody>
-      {% for item in items %}
-      <tr>
-        <td>{{ item.product.name }}</td>
-        <td>{{ item.quantity }}</td>
-        <td>{{ item.unit_price }}</td>
-        <td>{{ item.total_price }}</td>
-      </tr>
-      {% endfor %}
-    </tbody>
-    <tfoot>
-      <tr class="totals">
-        <td colspan="3">Subtotal</td>
-        <td>₵{{ sale.total_amount }}</td>
-      </tr>
-      <tr>
-        <td colspan="3">VAT (5%)</td>
-        <td>₵{{ sale.total_amount|floatformat:2|add:"0"|floatformat:2|floatformat:2 }}</td>
-      </tr>
-      <tr class="totals">
-        <td colspan="3"><strong>Grand Total</strong></td>
-        <td><strong>₵{{ sale.total_amount|floatformat:2 }}</strong></td>
-      </tr>
-    </tfoot>
-  </table>
-
-  <p class="center">Thank you for your purchase! 🧊</p>
-</body>
-</html> {% endcomment %}
