@@ -15,15 +15,24 @@
     display: flex;
     align-items: center;
     padding: 0 0.75rem;
+    background: #fff;
+    color: #0f172a;
   }
   .dark .select2-container .select2-selection--single {
     background: #0f172a;       /* slate-900/950 area */
     border-color: #334155;     /* slate-700 */
-    color: #e2e8f0;            /* slate-200 */
+    color: #f1f5f9;            /* slate-100 */
   }
   .select2-container--default .select2-selection--single .select2-selection__rendered {
     line-height: 42px;
     padding-left: 0;
+    color: inherit;
+  }
+  .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #94a3b8;            /* slate-400 */
+  }
+  .dark .select2-container--default .select2-selection--single .select2-selection__placeholder {
+    color: #cbd5e1;            /* slate-300 */
   }
   .select2-container--default .select2-selection--single .select2-selection__arrow {
     height: 42px;
@@ -32,14 +41,19 @@
     border-radius: 0.75rem;
     border: 1px solid #cbd5e1;
     overflow: hidden;
+    background: #fff;
+    color: #0f172a;
   }
   .dark .select2-dropdown {
     background: #0b1220;
     border-color: #334155;
-    color: #e2e8f0;
+    color: #f1f5f9;
   }
   .dark .select2-results__option--highlighted.select2-results__option--selectable {
-    background: #1e293b; /* slate-800 */
+    background: #1f2937; /* slate-800 */
+  }
+  .dark .select2-results__option--selectable {
+    color: #e2e8f0;
   }
 </style>
 
@@ -109,7 +123,7 @@ be changed to 4% as that is their vat rate but late said that they added the vat
 
             <div class="w-full lg:col-span-4">
               <label class="text-sm text-slate-700 dark:text-slate-200">Product</label>
-              {{ form.product|add_class:"product-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-900 dark:bg-slate-950 dark:text-slate-100 dark:border-slate-700" }}
+              {{ form.product|add_class:"product-select w-full rounded-xl p-2 sm:p-3 border border-slate-300 bg-white text-slate-700 dark:bg-slate-950 dark:text-slate-2 00 dark:border-slate-700" }}
             </div>
 
             <div class="w-full lg:col-span-3">

@@ -98,7 +98,8 @@ INSTALLED_APPS = [
     "assets.apps.AssetsConfig",
     "finance.apps.FinanceConfig",
 ]
-
+# Kevin
+# Kevin1510 for production only
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
